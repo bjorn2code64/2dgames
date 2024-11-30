@@ -42,7 +42,7 @@ protected:
 	const FLOAT m_invaderHeight = 40.0f;
 	const FLOAT m_invaderBorder = 10.0f;
 	const FLOAT m_invaderbulletSpeed = 15.0f;
-	const int m_invaderBulletChanceStart = 60;
+	const int m_invaderBulletChanceStart = 80;	// 1 in xxx
 	const int m_invaderCols = 10;
 	const int m_invaderRows = 5;
 	const int m_invaderMoveDelayStart = 1000;	// in ms
@@ -66,18 +66,20 @@ public:
 		m_player(m_playerStart, m_playerWidth, m_playerHeight, 0, 0, m_playerColour),
 		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
 		m_ship(NULL),
+		m_gone(NULL),
 
 		// tickers
 		m_tdInvaderMove(m_invaderMoveDelayStart),
 		m_tdPlayerReset(m_playerResetTime, false),
 		m_tdShip(m_shipSpawnTime),
 		m_tdShipScore(2000),
+		m_tdGone(100),
 
 		// Texts
-		m_textScore(L"", Point2F(0.0f, m_textHeight * 1.5f), 200.0f, m_textHeight, 0.0f, 0, m_textColour, DWRITE_TEXT_ALIGNMENT_CENTER),
-		m_textScoreLabel(L"Score", Point2F(0.0f, m_textHeight * 0.5f), 200.0f, m_textHeight, 0.0f, 0, m_textColour, DWRITE_TEXT_ALIGNMENT_CENTER),
-		m_textShipScore(L"100", Point2F(0.0f, 0.0f), m_shipWidth, m_textHeight, 0.0f, 0, m_shipColour, DWRITE_TEXT_ALIGNMENT_CENTER),
-		m_textGameOver(L"Game Over", Point2F(0.0f, m_screenHeight / 2.0F), (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, m_gameOverColour, DWRITE_TEXT_ALIGNMENT_CENTER)
+		m_textScore(L"", Point2F(0.0f, m_textHeight * 1.5f), 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_textColour),
+		m_textScoreLabel(L"Score", Point2F(0.0f, m_textHeight * 0.5f), 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_textColour),
+		m_textShipScore(L"100", Point2F(0.0f, 0.0f), m_shipWidth, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_shipColour),
+		m_textGameOver(L"Game Over", Point2F(0.0f, m_screenHeight / 2.0F), (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_gameOverColour)
 	{
 	}
 
@@ -96,6 +98,7 @@ public:
 		m_bitmap5.LoadFromFile(pRenderTarget, pIWICFactory, L"squidClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmap6.LoadFromFile(pRenderTarget, pIWICFactory, L"squidOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmapUFO.LoadFromFile(pRenderTarget, pIWICFactory, L"UFO.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapGone.LoadFromFile(pRenderTarget, pIWICFactory, L"invaderGone.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		return true;
 	}
 
@@ -108,7 +111,8 @@ public:
 		m_invaderBulletChance = m_invaderBulletChanceStart;
 
 		// Create Game Objects
-		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, m_shipColour);
+		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, 0);
+		m_gone = new MovingBitmap(&m_bitmapGone, Point2F(0, 0), m_invaderWidth, m_invaderHeight, m_invaderSpeed, 90, 0);
 
 		// Create the invaders
 		for (FLOAT x = 0; x < m_invaderCols; x++) {
@@ -136,6 +140,8 @@ public:
 				QueueShape(pInvader);
 			}
 		}
+		m_gone->SetUserData(3);
+		m_invaders.push_back(m_gone);
 
 		// Create the barriers as grids of destructable rectangles
 		FLOAT step = (FLOAT)m_screenWidth / (FLOAT)m_barrierCount;
@@ -179,6 +185,7 @@ public:
 		QueueShape(&m_player);
 		QueueShape(&m_playerBullet);
 		QueueShape(m_ship, false);
+		QueueShape(m_gone, false);
 		QueueShape(&m_textScore);
 		QueueShape(&m_textScoreLabel);
 		QueueShape(&m_textShipScore, false);
@@ -255,6 +262,11 @@ public:
 			events.pop();
 		}
 
+		if (m_tdGone.Elapsed(tick)) {
+			m_gone->SetActive(false);
+			m_tdGone.SetActive(false);
+		}
+
 		return true;
 	}
 
@@ -308,7 +320,7 @@ protected:
 				else if (p->GetUserData() == 1) {
 					p->SetBitmap(m_frame ? &m_bitmap3 : &m_bitmap4);
 				}
-				else {
+				else if (p->GetUserData() == 2) {
 					p->SetBitmap(m_frame ? &m_bitmap1 : &m_bitmap2);
 				}
 			}
@@ -373,9 +385,12 @@ protected:
 				for (auto& inv : m_invaders) {
 					if (inv->IsActive() && inv->HitTestShape(m_playerBullet)) {
 						inv->SetActive(false);	// disable the invader
+						m_gone->SetPos(inv->GetPos());
+						m_gone->SetActive(true);
+						m_tdGone.SetActive(true);
 						m_playerBullet.SetUserData(0);
 						AddScore(score_invader_hit);
-						m_tdInvaderMove.AddTicks(-15);						// speed up the invaders a little
+						m_tdInvaderMove.AddTicks(-20);						// speed up the invaders a little
 						m_invaderBulletChance -= 1; // increase bullet chance
 						break;
 					}
@@ -517,6 +532,7 @@ protected:
 	std::vector<MovingBitmap*> m_invaders;
 	std::vector<Shape*> m_invaderBullets;
 	MovingBitmap* m_ship;
+	MovingBitmap* m_gone;
 	MovingText m_textScore;
 	MovingText m_textScoreLabel;
 	std::vector<Shape*> m_barriers;
@@ -525,6 +541,7 @@ protected:
 	TickDelta m_tdPlayerReset;
 	TickDelta m_tdShip;
 	TickDelta m_tdShipScore;
+	TickDelta m_tdGone;
 	MovingText m_textShipScore;
 	MovingText m_textGameOver;
 
@@ -534,6 +551,7 @@ protected:
 	d2dBitmap m_bitmap4;
 	d2dBitmap m_bitmap5;
 	d2dBitmap m_bitmap6;
+	d2dBitmap m_bitmapGone;
 	d2dBitmap m_bitmapUFO;
 
 	int m_invaderBulletChance;

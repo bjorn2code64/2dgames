@@ -214,17 +214,21 @@
     <ClInclude Include="InvaderWorld.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="bitmap1.bmp" />
-    <Image Include="crabClosed.png" />
-    <Image Include="crabOpen.png" />
-    <Image Include="octopusClosed.png" />
-    <Image Include="octopusOpen.png" />
-    <Image Include="squidClosed.png" />
-    <Image Include="squidOpen.png" />
-    <Image Include="UFO.png" />
+    <Image Include="..\runtime\batlarger.png" />
+    <Image Include="..\runtime\bitmap1.bmp" />
+    <Image Include="..\runtime\crabClosed.png" />
+    <Image Include="..\runtime\crabOpen.png" />
+    <Image Include="..\runtime\invaderGone.png" />
+    <Image Include="..\runtime\multiball.png" />
+    <Image Include="..\runtime\octopusClosed.png" />
+    <Image Include="..\runtime\octopusOpen.png" />
+    <Image Include="..\runtime\shooter.png" />
+    <Image Include="..\runtime\squidClosed.png" />
+    <Image Include="..\runtime\squidOpen.png" />
+    <Image Include="..\runtime\UFO.png" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="level1.txt" />
+    <Text Include="..\runtime\level1.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

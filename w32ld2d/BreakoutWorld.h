@@ -52,8 +52,8 @@ public:
 		m_tdShooterMode(ballShooterTime, false),
 		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
 		m_countdownShooter(Point2F(400, 1030), 100.0F, 20.0f, 0.0f, 0, RGB(255, 0, 0)),
-		m_textScoreLabel(L"Score:", Point2F(10, 1030), 200.0f, 20.0f, 0, 0, RGB(255, 255, 255), DWRITE_TEXT_ALIGNMENT_CENTER),
-		m_textScore(L"0", Point2F(50, 1030), 200.0f, 20.0f, 0, 0, RGB(255, 255, 255), DWRITE_TEXT_ALIGNMENT_TRAILING)
+		m_textScoreLabel(L"Score:", Point2F(10, 1030), 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, RGB(255, 255, 255)),
+		m_textScore(L"0", Point2F(50, 1030), 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, RGB(255, 255, 255))
 	{
 	}
 	~BreakoutWorld() {}

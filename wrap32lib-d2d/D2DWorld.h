@@ -168,7 +168,8 @@ protected:
 class Shape : public Position
 {
 public:
-	Shape(const Point2F& pos, float speed, int dir, UINT32 rgb, LPARAM userdata = 0) : Position(pos, speed, dir), m_pBrush(NULL), m_rgb(rgb), m_userdata(userdata), m_active(false)  {
+	Shape(const Point2F& pos, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) : 
+		Position(pos, speed, dir), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(false)  {
 	}
 
 	~Shape() {
@@ -179,9 +180,9 @@ public:
 		UINT32 rgb =
 			(m_rgb & 0x000000ff) << 16 |
 			(m_rgb & 0x0000ff00) |
-			(m_rgb & 0x0000ff0000) >> 16 ;
+			(m_rgb & 0x00ff0000) >> 16;
 
-		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(rgb), &m_pBrush);
+		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(rgb, m_alpha), &m_pBrush);
 		m_active = true;
 	}
 
@@ -235,8 +236,11 @@ public:
 		return rThis.hitTest(rThat);
 	}
 
-	void SetColor(UINT32 rgb)	{ m_rgb = rgb; }
+	void SetColor(UINT32 rgb)	{ m_rgb = rgb;   }
 	COLORREF GetColor()			{ return m_rgb;  }
+
+	void SetAlpha(FLOAT alpha)	{ m_alpha = alpha; }
+	FLOAT GetAlpha()			{ return m_alpha; }
 
 	void SetUserData(LPARAM l) { m_userdata = l;  }
 	LPARAM GetUserData() { return m_userdata;  }
@@ -244,6 +248,7 @@ public:
 protected:
 	ID2D1SolidColorBrush* m_pBrush;
 	UINT32 m_rgb;
+	FLOAT m_alpha;
 	LPARAM m_userdata;
 	bool m_active;
 };
@@ -251,7 +256,7 @@ protected:
 class MovingCircle : public Shape
 {
 public:
-	MovingCircle(const Point2F& pos, float radius, float speed, int dir, UINT32 rgb, LPARAM userdata = 0) : Shape(pos, speed, dir, rgb, userdata), m_fRadius(radius) {}
+	MovingCircle(const Point2F& pos, float radius, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) : Shape(pos, speed, dir, rgb, alpha, userdata), m_fRadius(radius) {}
 
 	bool HitTest(Point2F pos) override {
 		float distSq = (pos.x - m_pos.x) * (pos.x - m_pos.x) +
@@ -394,8 +399,8 @@ protected:
 class MovingRectangle : public Shape
 {
 public:
-	MovingRectangle(const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, LPARAM userdata = 0) :
-		Shape(pos, speed, dir, rgb, userdata), m_fWidth(width), m_fHeight(height)
+	MovingRectangle(const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		Shape(pos, speed, dir, rgb, alpha, userdata), m_fWidth(width), m_fHeight(height)
 	{}
 
 	void SetSize(FLOAT width, FLOAT height) {
@@ -445,8 +450,8 @@ protected:
 class MovingBitmap : public Shape
 {
 public:
-	MovingBitmap(d2dBitmap* bitmap, const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, LPARAM userdata = 0) :
-		m_bitmap(bitmap), Shape(pos, speed, dir, rgb, userdata), m_fWidth(width), m_fHeight(height) {}
+	MovingBitmap(d2dBitmap* bitmap, const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		m_bitmap(bitmap), Shape(pos, speed, dir, rgb, alpha, userdata), m_fWidth(width), m_fHeight(height) {}
 
 	void SetBitmap(d2dBitmap* bitmap) {
 		m_bitmap = bitmap;
@@ -485,9 +490,9 @@ protected:
 
 class MovingText : public Shape {
 public:
-	MovingText(LPCWSTR wsz, const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, DWRITE_TEXT_ALIGNMENT ta, LPARAM userdata = 0) :
+	MovingText(LPCWSTR wsz, const Point2F& pos, float width, float height, float speed, int dir, DWRITE_TEXT_ALIGNMENT ta, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
 		m_text(wsz),
-		Shape(pos, speed, dir, rgb, userdata),
+		Shape(pos, speed, dir, rgb, alpha, userdata),
 		m_fWidth(width), m_fHeight(height),
 		m_pWTF(NULL),
 		m_ta(ta)
@@ -557,7 +562,7 @@ protected:
 
 class MovingGroup : public Shape {
 public:
-	MovingGroup(const Point2F& pos, float speed, int dir, LPARAM userdata = 0) : Shape(pos, speed, dir, RGB(0, 0, 0), userdata) {
+	MovingGroup(const Point2F& pos, float speed, int dir, LPARAM userdata = 0) : Shape(pos, speed, dir, RGB(0, 0, 0), 1.0F, userdata) {
 	}
 
 	void Add(Shape* p) { m_members.push_back(p); }

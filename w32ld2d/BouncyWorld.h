@@ -20,10 +20,7 @@ public:
 
 	BouncyWorld(Notifier& notifier) :
 		m_notifier(notifier),
-		m_menuBackground(Point2F(menuPosX, menuPosY), menuWidth, menuHeight, 0.0f, 0, RGB(0, 0, 0)),
-		m_textInvaders(L"Invaders", Point2F(menuPosX, menuPosY), menuWidth, menuTextHeight, 0.0f, 0, RGB(0, 255, 0), DWRITE_TEXT_ALIGNMENT_CENTER),
-		m_textBreakout(L"Breakout", Point2F(menuPosX, menuPosY + menuTextHeight), menuWidth, menuTextHeight, 0, 0, RGB(255, 0, 0), DWRITE_TEXT_ALIGNMENT_CENTER),
-		m_textColors(L"Colors", Point2F(menuPosX, menuPosY + 2 * menuTextHeight), menuWidth, menuTextHeight, 0, 0, RGB(0, 0, 255), DWRITE_TEXT_ALIGNMENT_CENTER)
+		m_menuBackground(Point2F(menuPosX, menuPosY), menuWidth, menuHeight, 0.0f, 0, RGB(0, 0, 0), 0.8F)
 	{
 	}
 
@@ -32,6 +29,33 @@ public:
 			delete shape;
 		}
 		m_movingShapes.clear();
+	}
+
+	void AddMenuItem(LPCWSTR text, COLORREF color, COLORREF highlight, AppMessage am, int percentDone) {
+		size_t menuitems = m_menuitems.size() / 2;
+
+		auto p = new MovingRectangle(
+			Point2F(menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight),
+			menuWidth * percentDone / 100, menuTextHeight, 0, 0,
+			color,
+			0.6);
+		QueueShape(p);
+
+		auto t = new MovingText(
+			text,
+			Point2F(menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight),
+			menuWidth, menuTextHeight, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER,
+			color);
+		m_menuitems.push_back(std::make_pair(t, am));
+		QueueShape(t);
+
+		t = new MovingText(
+			text,
+			Point2F(menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight),
+			menuWidth, menuTextHeight + 5.0F, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER,
+			highlight);
+		m_menuitems.push_back(std::make_pair(t, am));
+		QueueShape(t, false);
 	}
 
 	w32Size D2DGetScreenSize() override {
@@ -75,16 +99,22 @@ public:
 		}
 
 		QueueShape(&m_menuBackground);
-		QueueShape(&m_textInvaders);
-		QueueShape(&m_textBreakout);
-		QueueShape(&m_textColors);
+
+		AddMenuItem(L"Invaders", RGB(0, 128, 0), RGB(0, 255, 0), m_amRunInvaders, 95);
+		AddMenuItem(L"Breakout", RGB(128, 0, 0), RGB(255, 0, 0), m_amRunBreakout, 60);
+		AddMenuItem(L"Colors", RGB(0, 0, 128), RGB(0, 0, 255), m_amRunColors, 5);
+		AddMenuItem(L"Exit", RGB(128, 128, 128), RGB(255, 255, 255), m_amQuit, 0);
 
 		return true;
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
-		for (auto shape : m_movingShapes) {
+	void DeInit() override {
+		m_menuitems.clear();
+	}
 
+	bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
+		// Move all the shapes in the background
+		for (auto shape : m_movingShapes) {
 			// Bounce the shape off the edge
 			switch (shape->WillHitBounds(D2DGetScreenSize())) {
 			case Position::moveResult::hitboundsleft:
@@ -107,18 +137,30 @@ public:
 			}
 		}
 
+		// Highlight the menu item that the mouse is over 
+		for (int i = 0; i < m_menuitems.size(); i += 2) {
+			auto menuitem = m_menuitems[i].first;
+			auto menuitemhighlighted = m_menuitems[i + 1].first;
+
+			if (menuitem->HitTest(ptMouse)) {
+				menuitem->SetActive(false);
+				menuitemhighlighted->SetActive(true);
+			}
+			else {
+				menuitem->SetActive(true);
+				menuitemhighlighted->SetActive(false);
+			}
+		}
+
+		// Keyboard and mouse functions
 		while (!events.empty()) {
 			auto& ev = events.front();
 			if (ev.m_msg == WM_LBUTTONDOWN) {
-				// Left button click - where is the mouse?
-				if (m_textInvaders.HitTest(ptMouse)) {
-					m_notifier.Notify(m_amRunInvaders);
-				}
-				else if (m_textBreakout.HitTest(ptMouse)) {
-					m_notifier.Notify(m_amRunBreakout);
-				}
-				else if (m_textColors.HitTest(ptMouse)) {
-					m_notifier.Notify(m_amRunColors);
+				for (int i = 0; i < m_menuitems.size(); i += 2) {
+					auto menuitem = m_menuitems[i].first;
+					if (menuitem->HitTest(ptMouse)) {
+						m_notifier.Notify(m_menuitems[i].second);
+					}
 				}
 			}
 			else if (ev.m_msg == WM_KEYDOWN) {
@@ -135,9 +177,7 @@ public:
 protected:
 	Notifier& m_notifier;
 	MovingRectangle m_menuBackground;
-	MovingText m_textInvaders;
-	MovingText m_textBreakout;
-	MovingText m_textColors;
+	std::vector<std::pair<MovingText*, AppMessage>> m_menuitems;
 	std::vector<Shape*> m_movingShapes;
 
 public:

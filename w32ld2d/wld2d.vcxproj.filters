@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BouncyWorld.h" />
+    <ClInclude Include="BreakoutWorld.h" />
+    <ClInclude Include="ColorsWorld.h" />
+    <ClInclude Include="InvaderWorld.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{0f48d496-736a-44d0-b71e-f619ad565313}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\runtime\batlarger.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\bitmap1.bmp">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\crabClosed.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\crabOpen.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\multiball.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\octopusClosed.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\octopusOpen.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\shooter.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\squidClosed.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\squidOpen.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\UFO.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="..\runtime\invaderGone.png">
+      <Filter>Resources</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\runtime\level1.txt">
+      <Filter>Resources</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
