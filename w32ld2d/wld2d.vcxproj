@@ -210,11 +210,18 @@
   <ItemGroup>
     <ClInclude Include="BouncyWorld.h" />
     <ClInclude Include="BreakoutWorld.h" />
+    <ClInclude Include="ColorsWorld.h" />
     <ClInclude Include="InvaderWorld.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="invader1.png" />
-    <Image Include="invader2.png" />
+    <Image Include="bitmap1.bmp" />
+    <Image Include="crabClosed.png" />
+    <Image Include="crabOpen.png" />
+    <Image Include="octopusClosed.png" />
+    <Image Include="octopusOpen.png" />
+    <Image Include="squidClosed.png" />
+    <Image Include="squidOpen.png" />
+    <Image Include="UFO.png" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="level1.txt" />

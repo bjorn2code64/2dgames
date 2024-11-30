@@ -81,7 +81,7 @@ public:
 		UpdateCache();
 	}
 
-	void SetDirection(double direction) {
+	void SetDirectionInRad(double direction) {
 		m_direction = direction;
 		UpdateCache();
 	}
@@ -93,7 +93,6 @@ public:
 		UpdateCache();
 	}
 
-	virtual moveResult WillHitBounds(const D2D1_RECT_U& bounds) { return moveResult::ok; }
 	virtual void MovePos(Point2F& pos, float len = 0.0)
 	{
 		if (len > 0.0) {
@@ -193,28 +192,51 @@ public:
 	void SetActive(bool b) { m_active = b;  }
 	bool IsActive() { return m_active;  }
 
-	virtual moveResult WillHitBounds(const D2D1_RECT_U& bounds) { return __super::WillHitBounds(bounds); }
+	virtual moveResult WillHitBounds(const w32Size& screenSize) {
+		return WillHitBounds(screenSize, GetPos());
+	}
+
+	virtual moveResult WillHitBounds(const w32Size& screenSize, const Point2F& pos) {
+		Point2F posCurr = pos;
+		MovePos(posCurr);
+		RectF r;
+		GetBoundingBox(&r, posCurr);
+
+		if (r.left < 0)					return moveResult::hitboundsleft;
+		if (r.right >= screenSize.cx)	return moveResult::hitboundsright;
+		if (r.top < 0)					return moveResult::hitboundstop;
+		if (r.bottom >= screenSize.cy)	return moveResult::hitboundsbottom;
+
+		return moveResult::ok;
+	}
 
 	ID2D1SolidColorBrush* GetBrush() { return m_pBrush; }
 
 	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) {}
+	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, const D2DRectScaler* pRS = NULL) {}
 
-	virtual void GetBoundingBox(RectF*) const {}
+	virtual void GetBoundingBox(RectF*, const Point2F& pos) const {}
 	virtual bool HitTest(Point2F pos) {
 		RectF rThis;
-		GetBoundingBox(&rThis);
+		GetBoundingBox(&rThis, GetPos());
 		return rThis.ptInRect(pos);
+	}
+	virtual bool HitTest(RectF rect) {
+		RectF rThis;
+		GetBoundingBox(&rThis, GetPos());
+		return rThis.hitTest(rect);
 	}
 	bool HitTestShape(const Shape& rhs) {
 		RectF rThis;
-		GetBoundingBox(&rThis);
+		GetBoundingBox(&rThis, GetPos());
 
 		RectF rThat;
-		rhs.GetBoundingBox(&rThat);
+		rhs.GetBoundingBox(&rThat, rhs.GetPos());
 		return rThis.hitTest(rThat);
 	}
 
-	void SetColor(UINT32 rgb) { m_rgb = rgb; }
+	void SetColor(UINT32 rgb)	{ m_rgb = rgb; }
+	COLORREF GetColor()			{ return m_rgb;  }
 
 	void SetUserData(LPARAM l) { m_userdata = l;  }
 	LPARAM GetUserData() { return m_userdata;  }
@@ -237,27 +259,6 @@ public:
 		return distSq <= m_fRadius * m_fRadius;
 	}
 
-	virtual moveResult WillHitBounds(const D2D1_RECT_U& bounds) override {
-		auto currPos = GetPos();
-		__super::MovePos(currPos);
-
-		// Check if it hit an edge
-		if (currPos.x < bounds.left + m_fRadius) {
-			return moveResult::hitboundsleft;
-		}
-		if (currPos.x > bounds.right - m_fRadius) {
-			return moveResult::hitboundsright;
-		}
-		if (currPos.y < bounds.top + m_fRadius) {
-			return moveResult::hitboundstop;
-		}
-		if (currPos.y > bounds.bottom - m_fRadius) {
-			return moveResult::hitboundsbottom;
-		}
-
-		return moveResult::ok;
-	}
-
 	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
 		D2D1_ELLIPSE e;
 		e.point = GetPos();
@@ -270,16 +271,16 @@ public:
 		pRenderTarget->FillEllipse(&e, GetBrush());
 	}
 
-	void GetBoundingBox(RectF* p) const {
-		p->left = GetPos().x - m_fRadius;
-		p->right = GetPos().x + m_fRadius;
-		p->top = GetPos().y - m_fRadius;
-		p->bottom = GetPos().y + m_fRadius;
+	void GetBoundingBox(RectF* p, const Point2F& pos) const {
+		p->left = pos.x - m_fRadius;
+		p->right = pos.x + m_fRadius;
+		p->top = pos.y - m_fRadius;
+		p->bottom = pos.y + m_fRadius;
 	}
 
 	bool BounceOffRectSides(const Shape& shape) {
 		RectF r;
-		shape.GetBoundingBox(&r);
+		shape.GetBoundingBox(&r, GetPos());
 
 		Point2F pos = GetPos();	// where we are
 		MovePos(pos);	// where we will be
@@ -318,7 +319,7 @@ public:
 
 	bool BounceOffRectCorners(const Shape& shape) {
 		RectF r;
-		shape.GetBoundingBox(&r);
+		shape.GetBoundingBox(&r, GetPos());
 
 		Point2F pos = GetPos();	// where we are
 		MovePos(pos);	// where we will be
@@ -408,29 +409,7 @@ public:
 	void SetWidth(FLOAT f) { m_fWidth = f; }
 	void SetHeight(FLOAT f) { m_fHeight = f; }
 
-	moveResult WillHitBounds(const D2D1_RECT_U& bounds) {
-		Point2F currPos = GetPos();
-		__super::MovePos(currPos);
-
-		// Check if it hit an edge
-		if (currPos.x < bounds.left) {
-			return moveResult::hitboundsleft;
-		}
-		if (currPos.x > bounds.right - m_fWidth) {
-			return moveResult::hitboundsright;
-		}
-		if (currPos.y < bounds.top) {
-			return moveResult::hitboundstop;
-		}
-		if (currPos.y > bounds.bottom - m_fHeight) {
-			return moveResult::hitboundsbottom;
-		}
-
-		return moveResult::ok;
-	}
-
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
-		Point2F pos = GetPos();
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, const D2DRectScaler* pRS = NULL) override {
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
 		if (pRS) {
@@ -447,11 +426,15 @@ public:
 		pRenderTarget->FillRectangle(&r, GetBrush());
 	}
 
-	void GetBoundingBox(RectF* p) const {
-		p->left = GetPos().x;
-		p->right = GetPos().x + m_fWidth;
-		p->top = GetPos().y;
-		p->bottom = GetPos().y + m_fHeight;
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
+		Draw(pRenderTarget, GetPos(), pRS);
+	}
+
+	void GetBoundingBox(RectF* p, const Point2F& pos) const {
+		p->left = pos.x;
+		p->right = pos.x + m_fWidth - 1;
+		p->top = pos.y;
+		p->bottom = pos.y + m_fHeight - 1;
 	}
 
 protected:
@@ -467,27 +450,6 @@ public:
 
 	void SetBitmap(d2dBitmap* bitmap) {
 		m_bitmap = bitmap;
-	}
-
-	moveResult WillHitBounds(const D2D1_RECT_U& bounds) {
-		Point2F currPos = GetPos();
-		__super::MovePos(currPos);
-
-		// Check if it hit an edge
-		if (currPos.x < bounds.left) {
-			return moveResult::hitboundsleft;
-		}
-		if (currPos.x > bounds.right - m_fWidth) {
-			return moveResult::hitboundsright;
-		}
-		if (currPos.y < bounds.top) {
-			return moveResult::hitboundstop;
-		}
-		if (currPos.y > bounds.bottom - m_fHeight) {
-			return moveResult::hitboundsbottom;
-		}
-
-		return moveResult::ok;
 	}
 
 	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
@@ -508,11 +470,11 @@ public:
 		m_bitmap->Render(pRenderTarget, r);
 	}
 
-	void GetBoundingBox(RectF* p) const {
-		p->left = GetPos().x;
-		p->right = GetPos().x + m_fWidth;
-		p->top = GetPos().y;
-		p->bottom = GetPos().y + m_fHeight;
+	void GetBoundingBox(RectF* p, const Point2F& pos) const {
+		p->left = pos.x;
+		p->right = pos.x + m_fWidth;
+		p->top = pos.y;
+		p->bottom = pos.y + m_fHeight;
 	}
 
 protected:
@@ -578,12 +540,65 @@ public:
 		pRenderTarget->DrawTextW(m_text.c_str(), (UINT32)m_text.length(), m_pWTF, r, m_pBrush);
 	}
 
+	virtual void GetBoundingBox(RectF* pRect, const Point2F& pos) const {
+		pRect->left = pos.x;
+		pRect->top = pos.y;
+		pRect->right = pos.x + m_fWidth;
+		pRect->bottom = pos.y + m_fHeight;
+	}
+
 protected:
 	FLOAT m_fWidth;
 	FLOAT m_fHeight;
 	IDWriteTextFormat* m_pWTF;
 	std::wstring m_text;
 	DWRITE_TEXT_ALIGNMENT m_ta;
+};
+
+class MovingGroup : public Shape {
+public:
+	MovingGroup(const Point2F& pos, float speed, int dir, LPARAM userdata = 0) : Shape(pos, speed, dir, RGB(0, 0, 0), userdata) {
+	}
+
+	void Add(Shape* p) { m_members.push_back(p); }
+
+	const std::vector<Shape*>& GetMembers() { return m_members;  }
+
+	void D2DOnCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) override {
+		for (auto m : m_members) {
+			m->D2DOnCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		}
+	}
+
+	void D2DDiscardResources() override {
+		for (auto m : m_members) {
+			m->D2DDiscardResources();
+		}
+	}
+
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
+		for (auto m : m_members) {
+			Point2F pos = GetPos();
+			pos += m->GetPos();
+			m->Draw(pRenderTarget, pos, pRS);
+		}
+	}
+
+	moveResult WillHitBounds(const w32Size& size) {
+		for (auto m : m_members) {
+			Point2F pos = GetPos();
+			MovePos(pos);
+			pos += m->GetPos();
+			auto result = m->WillHitBounds(size, pos);
+			if (result != Position::moveResult::ok)
+				return result;
+		}
+
+		return Position::moveResult::ok;
+	}
+
+protected:
+	std::vector<Shape*> m_members;
 };
 
 class TickDelta {
@@ -609,8 +624,15 @@ public:
 	}
 
 	void AddTicks(int ticks) {
-		m_periodMS += ticks;
+		if ((ticks < 0) && (m_periodMS < -ticks)) {	// can't go < 0
+			m_periodMS = 0;
+		}
+		else {
+			m_periodMS += ticks;
+		}
 	}
+
+	ULONGLONG Remaining(ULONGLONG tick) { return m_periodMS - (tick - m_ullLast); }
 
 protected:
 	ULONGLONG m_ullLast;
@@ -627,7 +649,7 @@ public:
 	~D2DWorld() {
 	}
 
-	virtual bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS)
+ 	virtual bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS)
 	{
 		return true;
 	}
@@ -636,6 +658,8 @@ public:
 		for (auto p : m_shapes) {
 			p->D2DDiscardResources();
 		}
+		m_shapes.clear();
+
 		return true;
 	}
 
@@ -669,17 +693,20 @@ public:
 	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
 		// Now is the time to add queued shapes to the engine.
 		for (auto p : m_shapesQueue) {
-			AddShape(p, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+			AddShape(p.first, pDWriteFactory, pRenderTarget, pIWICFactory, pRS, p.second);
 		}
 		m_shapesQueue.clear();
 	}
 
-	void QueueShape(Shape* p) {
-		m_shapesQueue.push_back(p);
+	void QueueShape(Shape* p, bool active = true) {
+		m_shapesQueue.push_back(std::make_pair(p, active));
 	}
 
-	bool Init() {
+	virtual bool Init() {
 		return true;
+	}
+
+	virtual void DeInit() {
 	}
 
 	virtual bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) {
@@ -712,7 +739,8 @@ protected:
 
 protected:
 	std::vector<Shape*> m_shapes;
-	std::vector<Shape*> m_shapesQueue;
+	std::vector<std::pair<Shape*, bool>> m_shapesQueue;
+
 public:
 	D2D1::ColorF m_colorBackground;
 };

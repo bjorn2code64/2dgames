@@ -82,6 +82,8 @@ public:
 
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONUP:
+		case WM_KEYDOWN:
+		case WM_KEYUP:
 			m_events.push(WindowEvent(uMsg, wParam, lParam));
 			break;
 		}
@@ -160,6 +162,9 @@ protected:
 		SafeRelease(&m_pRenderTarget);
 	}
 
+	virtual bool Init() { return true; }
+	virtual void DeInit() {}
+
 	virtual bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) { return false;  }	// manipulate your data here - return true to quit
 
 	virtual void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {}	// draw the data here
@@ -171,6 +176,10 @@ protected:
 		}
 
 		if (D2DInit() != ERROR_SUCCESS) {
+			return;
+		}
+
+		if (!Init()) {
 			return;
 		}
 
@@ -212,6 +221,7 @@ protected:
 		SafeRelease(&m_pIWICFactory);
 		SafeRelease(&m_pDWriteFactory);
 		SafeRelease(&m_pDirect2dFactory);
+		DeInit();
 		CoUninitialize();
 	}
 

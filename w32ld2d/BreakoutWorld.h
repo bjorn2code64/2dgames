@@ -44,19 +44,21 @@ protected:
 	const int ballShooterTime = 10000;
 
 public:
-	BreakoutWorld() :
+	BreakoutWorld(Notifier& notifier) :
+		m_notifier(notifier),
 		m_bat(Point2F(0, 0), m_batStartWidth, m_batHeight, 0, 0, RGB(255, 255, 255)),
-		m_batWidthRequired(m_batStartWidth),
 		m_tdBatLarger(batLargerTime, false),
 		m_tdBallFaster(ballFasterTime, false),
 		m_tdShooterMode(ballShooterTime, false),
-		m_ballSpeed(m_ballStartSpeed),
-		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour)
+		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
+		m_countdownShooter(Point2F(400, 1030), 100.0F, 20.0f, 0.0f, 0, RGB(255, 0, 0)),
+		m_textScoreLabel(L"Score:", Point2F(10, 1030), 200.0f, 20.0f, 0, 0, RGB(255, 255, 255), DWRITE_TEXT_ALIGNMENT_CENTER),
+		m_textScore(L"0", Point2F(50, 1030), 200.0f, 20.0f, 0, 0, RGB(255, 255, 255), DWRITE_TEXT_ALIGNMENT_TRAILING)
 	{
 	}
 	~BreakoutWorld() {}
 
-	void GenerateBricks(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
+	void GenerateBricks() {
 		/*
 		srand(time(NULL));
 
@@ -92,6 +94,7 @@ public:
 				COLORREF brickColor = RGB(0, 0, 0);
 				int brickType = m_brickNormal;
 				bool isBrick = true;
+				d2dBitmap* bitmap = NULL;
 
 				switch (s.at(i)) {
 					case '0':
@@ -100,7 +103,7 @@ public:
 						break;
 					case '1':
 						brickType = m_brickBatLarger;
-						brickColor = RGB(0, 255, 0);
+						bitmap = &m_bitmapBatLarger;
 						break;
 					case '2':
 						brickType = m_brickBallSlower;
@@ -108,11 +111,11 @@ public:
 						break;
 					case '3':
 						brickType = m_brickMultiball;
-						brickColor = RGB(254, 255, 163);
+						bitmap = &m_bitmapMultiball;
 						break;
 					case '4':
 						brickType = m_brickShooter;
-						brickColor = RGB(255, 0, 0);
+						bitmap = &m_bitmapShooter;
 						break;
 					default:
 						isBrick = false;
@@ -120,13 +123,24 @@ public:
 				}
 
 				if (isBrick) {
-					MovingRectangle* pBrick = new MovingRectangle(Point2F(x * m_brickWidth, y * m_brickHeight),
-						m_brickWidth, m_brickHeight, 0, 0,
-						brickColor
-					);
-					m_bricks.push_back(pBrick);
-					AddShape(pBrick, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-					pBrick->SetUserData(brickType);
+					if (bitmap) {
+						MovingBitmap* pBrick = new MovingBitmap(bitmap, Point2F(x * m_brickWidth, y * m_brickHeight),
+							m_brickWidth, m_brickHeight, 0, 0,
+							brickColor
+						);
+						m_bricks.push_back(pBrick);
+						QueueShape(pBrick);
+						pBrick->SetUserData(brickType);
+					}
+					else {
+						MovingRectangle* pBrick = new MovingRectangle(Point2F(x * m_brickWidth, y * m_brickHeight),
+							m_brickWidth, m_brickHeight, 0, 0,
+							brickColor
+						);
+						m_bricks.push_back(pBrick);
+						QueueShape(pBrick);
+						pBrick->SetUserData(brickType);
+					}
 				}
 
 				x++;
@@ -163,29 +177,51 @@ public:
 	}
 
 	bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
+		m_bitmapMultiball.LoadFromFile(pRenderTarget, pIWICFactory, L"multiball.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
+		m_bitmapShooter.LoadFromFile(pRenderTarget, pIWICFactory, L"shooter.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
+		m_bitmapBatLarger.LoadFromFile(pRenderTarget, pIWICFactory, L"batlarger.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
+		return true;
+	}
+
+	bool Init() {
+		m_batWidthRequired = m_batStartWidth;
+		m_ballSpeed = m_ballStartSpeed;
+		m_score = 0;
+		m_textScore.SetText(std::to_wstring(m_score).c_str());
+
 		m_balls.push_back(new MovingCircle(Point2F(200.0f, 600.0f), m_ballRadius, m_ballStartSpeed, 135, RGB(255, 255, 255)));
 
-		GenerateBricks(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		GenerateBricks();
 
-		AddShape(&m_bat, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		QueueShape(&m_bat);
 		for (auto pBall : m_balls) {
-			AddShape(pBall, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+			QueueShape(pBall);
 		}
 
 		m_tdBallFaster.SetActive(true);
-		AddShape(&m_playerBullet, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		m_playerBullet.SetActive(false);
+		QueueShape(&m_playerBullet, false);
+		QueueShape(&m_countdownShooter, false);
+
+		QueueShape(&m_textScore);
+		QueueShape(&m_textScoreLabel);
 
 		return true;
 	}
 
+	void DeInit() {
+		for (auto b : m_balls)
+			delete b;
+
+		m_balls.clear();
+
+		for (auto b : m_bricks)
+			delete b;
+
+		m_bricks.clear();
+	}
+
 	bool D2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
 		m_colorBackground = D2D1::ColorF::Black;
-
-		D2D1_RECT_U screenBounds;
-		screenBounds.left = screenBounds.top = 0;
-		screenBounds.right = m_screenWidth;
-		screenBounds.bottom = m_screenHeight;
 
 		// Larger bat timeout elapsed?
 		if (m_tdBatLarger.Elapsed(tick)) {
@@ -208,20 +244,27 @@ public:
 			if (m_playerBullet.GetUserData() == 0) {	// hide the bullet if it's not inflight
 				m_playerBullet.SetActive(false);
 			}
+			m_countdownShooter.SetActive(false);
 		}
 
-		if (m_shooterMode) {
-			while (!events.empty()) {
-				auto& e = events.front();
-				if (e.m_msg == WM_LBUTTONDOWN) {
+		while (!events.empty()) {
+			auto& e = events.front();
+			if (e.m_msg == WM_LBUTTONDOWN) {
+				if (m_shooterMode) {
 					if (m_playerBullet.GetUserData() == 0) {
-						m_playerBullet.SetDirection(0);
+						m_playerBullet.SetDirectionInRad(0);
 						m_playerBullet.SetSpeed(m_playerbulletSpeed);
 						m_playerBullet.SetUserData(1);
 					}
 				}
-				events.pop();
+				m_countdownShooter.SetWidth((FLOAT)m_tdShooterMode.Remaining(tick) / 50.0f);
 			}
+			else if (e.m_msg == WM_KEYDOWN) {
+				if (e.m_wParam == VK_ESCAPE) {
+					m_notifier.Notify(m_amQuit);
+				}
+			}
+			events.pop();
 		}
 
 		FLOAT batWidth = m_bat.GetWidth();
@@ -235,7 +278,7 @@ public:
 			m_playerBullet.SetPos(Point2F(LimitF(bulletX, 0.0f, m_screenWidth - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
 		}
 		else {
-			if (m_playerBullet.WillHitBounds(screenBounds) != Position::moveResult::ok) {
+			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
 				ResetBullet();
 			}
 		}
@@ -281,7 +324,7 @@ public:
 		// Move any falling bricks
 		for (auto pBrick : m_bricks) {
 			// Has this brick gone past the player's bat?
-			if (pBrick->WillHitBounds(screenBounds) == Position::moveResult::hitboundsbottom) {
+			if (pBrick->WillHitBounds(D2DGetScreenSize()) == Position::moveResult::hitboundsbottom) {
 				pBrick->SetActive(false);
 			}
 		}
@@ -298,18 +341,16 @@ public:
 		else {
 			pBrickHit->SetActive(false);
 		}
+		m_score += 10;
+		m_textScore.SetText(std::to_wstring(m_score).c_str());
 	}
 
 	bool CheckBallHitScreenEdges(Shape* pBall) {
 		if (!pBall->IsActive())
 			return false;
-		D2D1_RECT_U rectBounds;
-		rectBounds.left = rectBounds.top = 0;
-		rectBounds.right = m_screenWidth;
-		rectBounds.bottom = m_screenHeight;
 
 		// Will the ball hit an edge?
-		switch (pBall->WillHitBounds(rectBounds)) {
+		switch (pBall->WillHitBounds(D2DGetScreenSize())) {
 		case Position::moveResult::hitboundsright:
 		case Position::moveResult::hitboundsleft:
 			pBall->BounceX();
@@ -418,6 +459,7 @@ public:
 					m_shooterMode = true;
 					m_tdShooterMode.SetActive(true);
 					m_playerBullet.SetActive(true);
+					m_countdownShooter.SetActive(true);
 				}
 				pBrick->SetActive(false);
 			}
@@ -449,18 +491,18 @@ public:
 	void AdjustBallAngle(MovingCircle* pBall) {
 		// The ball travelling too horizontally can be very boring while the player waits for it
 		// to descend so if ever we see this, correct the angle to a steeper one.
-		double direction = Position::RadToDeg(pBall->GetDirection());
+		double direction = pBall->GetDirectionInDeg();
 		if ((direction > 70) && (direction <= 90)) {
-			pBall->SetDirection(Position::DegToRad(69.5));
+			pBall->SetDirectionInDeg(69);
 		}
 		else if ((direction < 110) && (direction >= 90)) {
-			pBall->SetDirection(Position::DegToRad(110.5));
+			pBall->SetDirectionInDeg(110);
 		}
 		else if ((direction < -70) && (direction >= -90)) {
-			pBall->SetDirection(Position::DegToRad(-70.5));
+			pBall->SetDirectionInDeg(-70);
 		}
 		else if ((direction > -110) && (direction <= -90)) {
-			pBall->SetDirection(Position::DegToRad(-110.5));
+			pBall->SetDirectionInDeg(-110);
 		}
 	}
 
@@ -473,8 +515,20 @@ protected:
 	TickDelta m_tdBallFaster;
 	TickDelta m_tdShooterMode;
 	FLOAT m_ballSpeed;
+	MovingRectangle m_countdownShooter;
+	d2dBitmap m_bitmapMultiball;
+	d2dBitmap m_bitmapShooter;
+	d2dBitmap m_bitmapBatLarger;
+	MovingText m_textScoreLabel;
+	MovingText m_textScore;
+	int m_score;
+
+	Notifier& m_notifier;
 
 	// Shooter mode
 	bool m_shooterMode;
 	MovingRectangle m_playerBullet;
+
+public:
+	AppMessage m_amQuit;
 };

@@ -21,7 +21,7 @@ protected:
 	const FLOAT m_playerWidth = 80.0f;
 	const FLOAT m_playerHeight = 30.0f;
 	const Point2F m_playerStart = Point2F(0, 1000.0f);
-	const FLOAT m_playerSpeed = 20.0f;
+	const FLOAT m_playerSpeed = 10.0f;
 	const FLOAT m_playerbulletSpeed = 20.0f;
 	const int m_playerResetTime = 5000;
 	const COLORREF m_playerColour = RGB(255, 255, 255);
@@ -44,7 +44,7 @@ protected:
 	const FLOAT m_invaderbulletSpeed = 15.0f;
 	const int m_invaderBulletChanceStart = 60;
 	const int m_invaderCols = 10;
-	const int m_invaderRows = 4;
+	const int m_invaderRows = 5;
 	const int m_invaderMoveDelayStart = 1000;	// in ms
 	const FLOAT m_invaderSpeed = 25.0f;		// per move delay
 	const COLORREF m_invaderColour = RGB(0, 255, 0);
@@ -60,11 +60,12 @@ protected:
 	const COLORREF m_gameOverColour = RGB(255, 255, 255);
 
 public:
-	InvaderWorld() :
+	InvaderWorld(Notifier& notifier) :
+		m_notifier(notifier),
 		// shapes
 		m_player(m_playerStart, m_playerWidth, m_playerHeight, 0, 0, m_playerColour),
 		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
-		m_ship(Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, m_shipColour),
+		m_ship(NULL),
 
 		// tickers
 		m_tdInvaderMove(m_invaderMoveDelayStart),
@@ -72,31 +73,15 @@ public:
 		m_tdShip(m_shipSpawnTime),
 		m_tdShipScore(2000),
 
-		m_invaderBulletChance(m_invaderBulletChanceStart),
-
-		// Graphics
-		m_frame(false),
-
-		// Game logic
-		m_score(0),
-		m_livesRemaining(m_playerLives),
-
 		// Texts
 		m_textScore(L"", Point2F(0.0f, m_textHeight * 1.5f), 200.0f, m_textHeight, 0.0f, 0, m_textColour, DWRITE_TEXT_ALIGNMENT_CENTER),
+		m_textScoreLabel(L"Score", Point2F(0.0f, m_textHeight * 0.5f), 200.0f, m_textHeight, 0.0f, 0, m_textColour, DWRITE_TEXT_ALIGNMENT_CENTER),
 		m_textShipScore(L"100", Point2F(0.0f, 0.0f), m_shipWidth, m_textHeight, 0.0f, 0, m_shipColour, DWRITE_TEXT_ALIGNMENT_CENTER),
 		m_textGameOver(L"Game Over", Point2F(0.0f, m_screenHeight / 2.0F), (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, m_gameOverColour, DWRITE_TEXT_ALIGNMENT_CENTER)
 	{
 	}
 
 	~InvaderWorld() {
-		for (auto p : m_invaders)
-			delete p;
-
-		for (auto p : m_invaderBullets)
-			delete p;
-
-		for (auto p : m_barriers)
-			delete p;
 	}
 
 	w32Size D2DGetScreenSize() override {
@@ -104,21 +89,51 @@ public:
 	}
 
 	bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
-		m_bitmap1.LoadFromFile(pRenderTarget, pIWICFactory, L"invader1.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmap2.LoadFromFile(pRenderTarget, pIWICFactory, L"invader2.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmap1.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmap2.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmap3.LoadFromFile(pRenderTarget, pIWICFactory, L"crabClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmap4.LoadFromFile(pRenderTarget, pIWICFactory, L"crabOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmap5.LoadFromFile(pRenderTarget, pIWICFactory, L"squidClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmap6.LoadFromFile(pRenderTarget, pIWICFactory, L"squidOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapUFO.LoadFromFile(pRenderTarget, pIWICFactory, L"UFO.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		return true;
+	}
+
+	bool Init() {
+		// Initialise Game Variables
+		m_score = 0;
+		m_livesRemaining = m_playerLives;
+		m_player.SetPos(m_playerStart);
+		m_frame = false;
+		m_invaderBulletChance = m_invaderBulletChanceStart;
+
+		// Create Game Objects
+		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, m_shipColour);
 
 		// Create the invaders
 		for (FLOAT x = 0; x < m_invaderCols; x++) {
 			for (int y = 0; y < m_invaderRows; y++) {
-				MovingBitmap* pInvader = new MovingBitmap(&m_bitmap1,
+				int invaderType = 0;
+				d2dBitmap* p = &m_bitmap5;
+				if ((y == 1) || (y == 2)) {
+					p = &m_bitmap3;
+					invaderType = 1;
+				}
+				else if ((y == 3) || (y == 4)) {
+					p = &m_bitmap1;
+					invaderType = 2;
+				}
+
+				MovingBitmap* pInvader = new MovingBitmap(p,
 					Point2F(m_invaderBorder + x * (m_invaderWidth + m_invaderBorder),
 						m_invaderBorder + y * (m_invaderHeight + m_invaderBorder) + m_scoreY + m_shipY),
 					m_invaderWidth, m_invaderHeight,
 					m_invaderSpeed, 90,
 					m_invaderColour
 				);
+				pInvader->SetUserData(invaderType);
 				m_invaders.push_back(pInvader);
-				AddShape(pInvader, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+				QueueShape(pInvader);
 			}
 		}
 
@@ -137,14 +152,14 @@ public:
 						divBarrierWidth + 1.0F, divBarrierHeight + 1.0F, 0.0F, 0, m_barrierColour);
 
 					m_barriers.push_back(barrier);
-					AddShape(barrier, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+					QueueShape(barrier);
 				}
 			}
 		}
 
 		// Create the player life indicators
 		Point2F playerLifePt = m_playerLivesStart;
-		for (int i = 0; i < m_playerLives; i++) {
+		for (int i = 0; i < m_playerLives - 1; i++) {
 			FLOAT piHeight = m_playerHeight * m_playerIndicatorSize;
 			FLOAT piWidth = m_playerWidth * m_playerIndicatorSize;
 			auto life = new MovingRectangle(playerLifePt, piWidth, piHeight, 0, 0, m_playerColour);
@@ -155,21 +170,19 @@ public:
 			bullet->SetPos(pos);
 
 			playerLifePt.x += piWidth + 10.0F;
-			AddShape(life, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+			QueueShape(life);
 			m_playerLifeIndicators.push_back(life);
-			AddShape(bullet, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+			QueueShape(bullet);
 			m_playerLifeIndicators.push_back(bullet);
 		}
 
-		AddShape(&m_player, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		AddShape(&m_playerBullet, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		AddShape(&m_ship, pDWriteFactory, pRenderTarget, pIWICFactory, pRS, false);
-		AddShape(&m_textScore, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		AddShape(new MovingText(L"Score", Point2F(0.0f, m_textHeight * 0.5f), 200.0f, m_textHeight, 0.0f, 0, m_textColour, DWRITE_TEXT_ALIGNMENT_CENTER), pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		AddShape(&m_textShipScore, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		m_textShipScore.SetActive(false);
-		AddShape(&m_textGameOver, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
-		m_textGameOver.SetActive(false);
+		QueueShape(&m_player);
+		QueueShape(&m_playerBullet);
+		QueueShape(m_ship, false);
+		QueueShape(&m_textScore);
+		QueueShape(&m_textScoreLabel);
+		QueueShape(&m_textShipScore, false);
+		QueueShape(&m_textGameOver, false);
 
 		UpdateIndicators();
 
@@ -178,21 +191,38 @@ public:
 		return true;
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
-		D2D1_RECT_U rectBounds;
-		rectBounds.left = rectBounds.top = 0;
-		rectBounds.right = m_screenWidth;
-		rectBounds.bottom = m_screenHeight;
+	void DeInit() {
+		delete m_ship;
+		m_ship = NULL;
 
+		for (auto p : m_invaders)
+			delete p;
+		m_invaders.clear();
+
+		for (auto p : m_invaderBullets)
+			delete p;
+		m_invaderBullets.clear();
+
+		for (auto p : m_barriers)
+			delete p;
+		m_barriers.clear();
+
+		for (auto p : m_playerLifeIndicators) {
+			delete p;
+		}
+		m_playerLifeIndicators.clear();
+	}
+
+	bool D2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
 		UpdateCheckPlayerKeys();
 
-		UpdateMoveInvaders(rectBounds, tick);
+		UpdateMoveInvaders(tick);
 
-		UpdateMovePlayer(rectBounds);
+		UpdateMovePlayer();
 
-		UpdateMovePlayerBullet(rectBounds);
+		UpdateMovePlayerBullet();
 
-		UpdateMoveInvaderBullets(rectBounds);
+		UpdateMoveInvaderBullets();
 
 		// Game over? Don't do anything else.
 		if (m_livesRemaining == 0) {
@@ -201,7 +231,9 @@ public:
 
 		UpdateFireInvaderBullets();
 
-		UpdateShip(rectBounds, tick);
+		if (m_ship) {
+			UpdateShip(tick);
+		}
 
 		// Does the player need to respawn?
 		if (m_tdPlayerReset.Elapsed(tick)) {	// respawn?
@@ -210,6 +242,17 @@ public:
 			m_player.SetActive(true);
 			m_playerBullet.SetActive(true);
 			m_tdPlayerReset.SetActive(false);
+		}
+
+		while (!events.empty()) {
+			auto& ev = events.front();
+			if (ev.m_msg == WM_KEYDOWN) {
+				if (ev.m_wParam == VK_ESCAPE) {
+					// quit back to menu
+					m_notifier.Notify(m_amQuit);
+				}
+			}
+			events.pop();
 		}
 
 		return true;
@@ -253,20 +296,28 @@ protected:
 		}
 	}
 
-	void UpdateMoveInvaders(const D2D1_RECT_U& rectBounds, ULONGLONG tick) {
+	void UpdateMoveInvaders(ULONGLONG tick) {
 		bool hitEnd = false;
 		if (m_tdInvaderMove.Elapsed(tick)) {
 			// Time for an invader move
 			// Replace the bitmap
 			for (auto* p : m_invaders) {
-				p->SetBitmap(m_frame ? &m_bitmap1 : &m_bitmap2);
+				if (p->GetUserData() == 0) {
+					p->SetBitmap(m_frame ? &m_bitmap5 : &m_bitmap6);
+				}
+				else if (p->GetUserData() == 1) {
+					p->SetBitmap(m_frame ? &m_bitmap3 : &m_bitmap4);
+				}
+				else {
+					p->SetBitmap(m_frame ? &m_bitmap1 : &m_bitmap2);
+				}
 			}
 			m_frame = !m_frame;
 
 			// Check if they move, will any of them hit the end.
 			for (auto* p : m_invaders) {
 				if (p->IsActive()) {
-					if (p->WillHitBounds(rectBounds) != Position::moveResult::ok) {
+					if (p->WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
 						hitEnd = true;
 					}
 				}
@@ -289,9 +340,9 @@ protected:
 		}
 	}
 
-	void UpdateMovePlayer(const D2D1_RECT_U& rectBounds) {
+	void UpdateMovePlayer() {
 		// Move the player
-		if (m_player.WillHitBounds(rectBounds) == Position::moveResult::ok) {
+		if (m_player.WillHitBounds(D2DGetScreenSize()) == Position::moveResult::ok) {
 			m_player.Move();
 		}
 		else {
@@ -299,10 +350,10 @@ protected:
 		}
 	}
 
-	void UpdateMovePlayerBullet(const D2D1_RECT_U& rectBounds) {
+	void UpdateMovePlayerBullet() {
 		// Move the player bullet
 		if (m_playerBullet.IsActive()) {
-			if (m_playerBullet.WillHitBounds(rectBounds) != Position::moveResult::ok) {
+			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
 				m_playerBullet.SetUserData(0);
 			}
 			else {
@@ -324,19 +375,19 @@ protected:
 						inv->SetActive(false);	// disable the invader
 						m_playerBullet.SetUserData(0);
 						AddScore(score_invader_hit);
-						m_tdInvaderMove.AddTicks(-25);						// speed up the invaders a little
+						m_tdInvaderMove.AddTicks(-15);						// speed up the invaders a little
 						m_invaderBulletChance -= 1; // increase bullet chance
 						break;
 					}
 				}
 
 				// Did we hit a ship at the top?
-				if (m_ship.IsActive() && m_ship.HitTestShape(m_playerBullet)) {
-					m_ship.SetActive(false);
+				if (m_ship && m_ship->IsActive() && m_ship->HitTestShape(m_playerBullet)) {
+					m_ship->SetActive(false);
 					m_playerBullet.SetUserData(0);
 
 					// Display the score and set off a timer
-					m_textShipScore.SetPos(m_ship.GetPos());
+					m_textShipScore.SetPos(m_ship->GetPos());
 					m_textShipScore.SetActive(true);
 					m_tdShipScore.SetActive(true);
 
@@ -353,11 +404,11 @@ protected:
 		}
 	}
 
-	void UpdateMoveInvaderBullets(const D2D1_RECT_U& rectBounds) {
+	void UpdateMoveInvaderBullets() {
 		// Move (and destroy) invader bullets
 		for (auto it = m_invaderBullets.begin(); it != m_invaderBullets.end();) {
 			if ((*it)->IsActive()) {
-				if ((*it)->WillHitBounds(rectBounds) != Position::moveResult::ok) {
+				if ((*it)->WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
 					// we're out of bounds
 					RemoveShape(*it);
 					it = m_invaderBullets.erase(it);	// remove the bullet
@@ -430,14 +481,14 @@ protected:
 		}
 	}
 
-	void UpdateShip(const D2D1_RECT_U& rectBounds, ULONGLONG tick) {
-		if (m_ship.IsActive()) {
+	void UpdateShip(ULONGLONG tick) {
+		if (m_ship->IsActive()) {
 			// Move the ship along the top
-			if (m_ship.WillHitBounds(rectBounds) == Position::moveResult::ok) {
-				m_ship.Move();
+			if (m_ship->WillHitBounds(D2DGetScreenSize()) == Position::moveResult::ok) {
+				m_ship->Move();
 			}
 			else {
-				m_ship.SetActive(false);
+				m_ship->SetActive(false);
 			}
 		}
 
@@ -447,8 +498,8 @@ protected:
 
 		// Spawn a ship along the top?
 		if (m_tdShip.Elapsed(tick)) {
-			m_ship.SetPos(Point2F(0.0f, m_scoreY + (m_shipY - m_shipHeight) / 2.0f));
-			m_ship.SetActive(true);
+			m_ship->SetPos(Point2F(0.0f, m_scoreY + (m_shipY - m_shipHeight) / 2.0f));
+			m_ship->SetActive(true);
 		}
 	}
 
@@ -465,8 +516,9 @@ protected:
 	std::vector<Shape*> m_playerLifeIndicators;
 	std::vector<MovingBitmap*> m_invaders;
 	std::vector<Shape*> m_invaderBullets;
-	MovingRectangle m_ship;
+	MovingBitmap* m_ship;
 	MovingText m_textScore;
+	MovingText m_textScoreLabel;
 	std::vector<Shape*> m_barriers;
 
 	TickDelta m_tdInvaderMove;
@@ -478,10 +530,19 @@ protected:
 
 	d2dBitmap m_bitmap1;
 	d2dBitmap m_bitmap2;
+	d2dBitmap m_bitmap3;
+	d2dBitmap m_bitmap4;
+	d2dBitmap m_bitmap5;
+	d2dBitmap m_bitmap6;
+	d2dBitmap m_bitmapUFO;
 
 	int m_invaderBulletChance;
 	int m_score;
 	int m_livesRemaining;
 
 	bool m_frame;
+
+	Notifier& m_notifier;
+public:
+	AppMessage m_amQuit;
 };
