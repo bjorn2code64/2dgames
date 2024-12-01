@@ -67,13 +67,14 @@ public:
 		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
 		m_ship(NULL),
 		m_gone(NULL),
+		m_groupInvaders(Point2F(0.0f, 0.0f), 0, 0),
 
 		// tickers
 		m_tdInvaderMove(m_invaderMoveDelayStart),
 		m_tdPlayerReset(m_playerResetTime, false),
 		m_tdShip(m_shipSpawnTime),
-		m_tdShipScore(2000),
-		m_tdGone(100),
+		m_tdShipScore(2000, false),
+		m_tdGone(100, false),
 
 		// Texts
 		m_textScore(L"", Point2F(0.0f, m_textHeight * 1.5f), 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_textColour),
@@ -132,16 +133,24 @@ public:
 					Point2F(m_invaderBorder + x * (m_invaderWidth + m_invaderBorder),
 						m_invaderBorder + y * (m_invaderHeight + m_invaderBorder) + m_scoreY + m_shipY),
 					m_invaderWidth, m_invaderHeight,
-					m_invaderSpeed, 90,
+					0, 0,
 					m_invaderColour
 				);
 				pInvader->SetUserData(invaderType);
 				m_invaders.push_back(pInvader);
-				QueueShape(pInvader);
+				m_groupInvaders.AddChild(pInvader);
 			}
 		}
 		m_gone->SetUserData(3);
+		m_gone->SetActive(false);
 		m_invaders.push_back(m_gone);
+		m_groupInvaders.AddChild(m_gone);
+
+		m_groupInvaders.SetPos(Point2F(0.0F, 0.0F));
+		m_groupInvaders.SetSpeed(m_invaderSpeed);
+		m_groupInvaders.SetDirectionInDeg(90);
+
+		QueueShape(&m_groupInvaders);
 
 		// Create the barriers as grids of destructable rectangles
 		FLOAT step = (FLOAT)m_screenWidth / (FLOAT)m_barrierCount;
@@ -185,7 +194,7 @@ public:
 		QueueShape(&m_player);
 		QueueShape(&m_playerBullet);
 		QueueShape(m_ship, false);
-		QueueShape(m_gone, false);
+//		QueueShape(m_gone, false);
 		QueueShape(&m_textScore);
 		QueueShape(&m_textScoreLabel);
 		QueueShape(&m_textShipScore, false);
@@ -329,7 +338,7 @@ protected:
 			// Check if they move, will any of them hit the end.
 			for (auto* p : m_invaders) {
 				if (p->IsActive()) {
-					if (p->WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
+					if (p->WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
 						hitEnd = true;
 					}
 				}
@@ -337,24 +346,18 @@ protected:
 
 			if (hitEnd) {
 				// Move invaders down and send them back the other way
-				for (auto inv : m_invaders) {
-					if (inv->IsActive()) {
-						inv->BounceX();
-						inv->OffsetPos(Point2F(0.0f, 60.0f));
-					}
-				}
+				m_groupInvaders.BounceX();
+				m_groupInvaders.OffsetPos(Point2F(0.0f, 60.0f));
 			}
 			else {
-				for (auto inv : m_invaders) {
-					inv->Move();
-				}
+				m_groupInvaders.Move();
 			}
 		}
 	}
 
 	void UpdateMovePlayer() {
 		// Move the player
-		if (m_player.WillHitBounds(D2DGetScreenSize()) == Position::moveResult::ok) {
+		if (m_player.WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::ok) {
 			m_player.Move();
 		}
 		else {
@@ -365,7 +368,7 @@ protected:
 	void UpdateMovePlayerBullet() {
 		// Move the player bullet
 		if (m_playerBullet.IsActive()) {
-			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
+			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
 				m_playerBullet.SetUserData(0);
 			}
 			else {
@@ -385,7 +388,7 @@ protected:
 				for (auto& inv : m_invaders) {
 					if (inv->IsActive() && inv->HitTestShape(m_playerBullet)) {
 						inv->SetActive(false);	// disable the invader
-						m_gone->SetPos(inv->GetPos());
+						m_gone->SetPos(inv->GetPos(false));
 						m_gone->SetActive(true);
 						m_tdGone.SetActive(true);
 						m_playerBullet.SetUserData(0);
@@ -423,7 +426,7 @@ protected:
 		// Move (and destroy) invader bullets
 		for (auto it = m_invaderBullets.begin(); it != m_invaderBullets.end();) {
 			if ((*it)->IsActive()) {
-				if ((*it)->WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
+				if ((*it)->WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
 					// we're out of bounds
 					RemoveShape(*it);
 					it = m_invaderBullets.erase(it);	// remove the bullet
@@ -499,7 +502,7 @@ protected:
 	void UpdateShip(ULONGLONG tick) {
 		if (m_ship->IsActive()) {
 			// Move the ship along the top
-			if (m_ship->WillHitBounds(D2DGetScreenSize()) == Position::moveResult::ok) {
+			if (m_ship->WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::ok) {
 				m_ship->Move();
 			}
 			else {
@@ -529,6 +532,7 @@ protected:
 	MovingRectangle m_player;
 	MovingRectangle m_playerBullet;
 	std::vector<Shape*> m_playerLifeIndicators;
+	MovingGroup m_groupInvaders;
 	std::vector<MovingBitmap*> m_invaders;
 	std::vector<Shape*> m_invaderBullets;
 	MovingBitmap* m_ship;

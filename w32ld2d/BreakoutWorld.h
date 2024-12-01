@@ -278,7 +278,7 @@ public:
 			m_playerBullet.SetPos(Point2F(LimitF(bulletX, 0.0f, m_screenWidth - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
 		}
 		else {
-			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Position::moveResult::ok) {
+			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
 				ResetBullet();
 			}
 		}
@@ -297,7 +297,7 @@ public:
 		}
 
 		for (auto pBall : m_balls) {
-			CheckBallHitBat(pBall);
+			WillBallHitBat(pBall);
 		}
 
 		for (auto pBall : m_balls) {
@@ -324,7 +324,7 @@ public:
 		// Move any falling bricks
 		for (auto pBrick : m_bricks) {
 			// Has this brick gone past the player's bat?
-			if (pBrick->WillHitBounds(D2DGetScreenSize()) == Position::moveResult::hitboundsbottom) {
+			if (pBrick->WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
 				pBrick->SetActive(false);
 			}
 		}
@@ -351,25 +351,25 @@ public:
 
 		// Will the ball hit an edge?
 		switch (pBall->WillHitBounds(D2DGetScreenSize())) {
-		case Position::moveResult::hitboundsright:
-		case Position::moveResult::hitboundsleft:
+		case Shape::moveResult::hitboundsright:
+		case Shape::moveResult::hitboundsleft:
 			pBall->BounceX();
 			break;
-		case Position::moveResult::hitboundstop:
+		case Shape::moveResult::hitboundstop:
 			pBall->BounceY();
 			break;
-		case Position::moveResult::hitboundsbottom:
+		case Shape::moveResult::hitboundsbottom:
 			return true;
 		}
 		return false;
 	}
 
-	void CheckBallHitBat(MovingCircle* pBall) {
+	void WillBallHitBat(MovingCircle* pBall) {
 		if (!pBall->IsActive())
 			return;
 
 		// Did the bat hit the ball?
-		if (pBall->BounceOffRectSides(m_bat) || pBall->BounceOffRectCorners(m_bat)) {
+		if (pBall->WillBounceOffRectSides(m_bat) || pBall->WillBounceOffRectCorners(m_bat)) {
 			FLOAT batWidth = m_bat.GetWidth();
 			FLOAT middleOfBat = m_bat.GetPos().x + batWidth / 2.0f;
 			FLOAT middleOfBall = pBall->GetPos().x + m_ballRadius;
@@ -388,7 +388,7 @@ public:
 		// Has the ball hit a brick
 		for (auto pBrick : m_bricks) {
 			if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
-				if (pBall->BounceOffRectSides(*pBrick)) {
+				if (pBall->WillBounceOffRectSides(*pBrick)) {
 					special = (int)pBrick->GetUserData();
 					hit = true;
 					pBrickHit = pBrick;
@@ -400,7 +400,7 @@ public:
 		if (!hit) {
 			for (auto pBrick : m_bricks) {
 				if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
-					if (pBall->BounceOffRectCorners(*pBrick)) {
+					if (pBall->WillBounceOffRectCorners(*pBrick)) {
 						special = (int)pBrick->GetUserData();
 						pBrickHit = pBrick;
 						break;
