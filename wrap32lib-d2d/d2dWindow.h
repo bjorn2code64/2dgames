@@ -34,14 +34,16 @@ public:
 class D2DWindow : public Window, public EventThread
 {
 public:
-	D2DWindow(WORD flags, Window* pParent = NULL, DWORD dwUpdateRate = 10) :
+	D2DWindow(WORD flags, Window* pParent = NULL, DWORD dwUpdateRate = 20) :
 		Window(flags, pParent),
 		m_pDirect2dFactory(NULL),
 		m_pDWriteFactory(NULL),
 		m_pIWICFactory(NULL),
 		m_pRenderTarget(NULL),
 		m_dwUpdateRate(dwUpdateRate),
-		m_rsFAR(0, 0)
+		m_rsFAR(0, 0),
+		m_updateTime(0),
+		m_updateCount(0)
 	{}
 
 	~D2DWindow(void) {
@@ -157,6 +159,34 @@ protected:
 		return ERROR_SUCCESS;
 	}
 
+	bool OnUpdateTimer() {
+		ULONGLONG updateStart = GetTickCount64();
+
+		if (!D2DUpdate(updateStart, m_ptMouse, m_events)) return true;
+		m_events = std::queue<WindowEvent>();
+
+		if (EnsureDeviceResourcesCreated() != S_OK)	return true;
+
+		D2DPreRender(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
+
+		m_pRenderTarget->BeginDraw();
+		D2DRender(m_pRenderTarget);
+		if (m_pRenderTarget->EndDraw() == D2DERR_RECREATE_TARGET) {
+			D2DDiscard();	// Free these up so they're created again next time around
+		}
+		m_updateTime += GetTickCount64() - updateStart;
+		m_updateCount++;
+		return false;
+	}
+
+	bool OnResize() {
+		if (m_pRenderTarget) {
+			m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
+			m_rsFAR.SetBounds(m_pRenderTarget->GetSize());
+		}
+		return false;
+	}
+
 	void D2DDiscard() {
 		D2DOnDiscardResources();
 		SafeRelease(&m_pRenderTarget);
@@ -171,6 +201,9 @@ protected:
 	virtual void D2DRender(ID2D1HwndRenderTarget* pRenderTarget) {}	// draw the data here
 
 	void ThreadStartup() override {
+		m_updateTime = 0;
+		m_updateCount = 0;
+
 		if (CoInitialize(NULL) != S_OK) {
 			return;
 		}
@@ -184,44 +217,22 @@ protected:
 		}
 
 		TimerQueue::Timer* timer = TELAddTimer(
-			[this]()
-			{
-				if (!D2DUpdate(GetTickCount64(), m_ptMouse, m_events)) return true;
-				m_events = std::queue<WindowEvent>();
-
-				if (EnsureDeviceResourcesCreated() != S_OK)	return true;
-
-				D2DPreRender(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
-
-				m_pRenderTarget->BeginDraw();
-				D2DRender(m_pRenderTarget);
-				if (m_pRenderTarget->EndDraw() == D2DERR_RECREATE_TARGET) {
-					D2DDiscard();	// Free these up so they're created again next time around
-				}
-				return false;
-			}
+			[this]() {	return this->OnUpdateTimer();	}
 		);
 
 		TELAddEvent(m_evResize,
-			[this]() 
-			{
-				if (m_pRenderTarget) {
-					m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
-					m_rsFAR.SetBounds(m_pRenderTarget->GetSize());
-				}
-				return false;
-			}
+			[this]() {	return this->OnResize();		}
 		);
 
 		timer->Start(0, m_dwUpdateRate);
 	}
 
 	void ThreadShutdown() override {
+		DeInit();
 		D2DDiscard();
 		SafeRelease(&m_pIWICFactory);
 		SafeRelease(&m_pDWriteFactory);
 		SafeRelease(&m_pDirect2dFactory);
-		DeInit();
 		CoUninitialize();
 	}
 
@@ -241,6 +252,8 @@ protected:
 		IWICImagingFactory* pIWICFactory) {}
 	virtual void D2DOnDiscardResources() {}
 
+	ULONGLONG GetAvgUpdateTime() { return (m_updateCount > 0) ? m_updateTime / m_updateCount : 0;  }
+
 protected:
 	ID2D1Factory* m_pDirect2dFactory;
 	IDWriteFactory* m_pDWriteFactory;
@@ -253,4 +266,7 @@ protected:
 	DWORD m_dwUpdateRate;	// in ms
 	Point2F m_ptMouse;				// Track the mouse position
 	std::queue<WindowEvent> m_events;
+
+	ULONGLONG m_updateTime;		// Time spent in update function (ms)
+	ULONGLONG m_updateCount;	// Number of calls to update function
 };

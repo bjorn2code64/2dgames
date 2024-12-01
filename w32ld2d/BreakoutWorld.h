@@ -209,14 +209,7 @@ public:
 	}
 
 	void DeInit() {
-		for (auto b : m_balls)
-			delete b;
-
 		m_balls.clear();
-
-		for (auto b : m_bricks)
-			delete b;
-
 		m_bricks.clear();
 	}
 

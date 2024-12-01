@@ -276,7 +276,8 @@ public:
 	void SetParent(Shape* group) { m_parent = group; }
 	Shape* GetParent() { return m_parent; }
 
-	void AddChild(Shape* p) { m_children.push_back(p); p->SetParent(this); }
+	void InsertChild(Shape* p) { m_children.insert(m_children.begin(), p); p->SetParent(this); }	// at the beginning
+	void AddChild(Shape* p) { m_children.push_back(p); p->SetParent(this); }						// at the end
 	void RemoveChild(Shape* p) {
 		auto it = std::find(m_children.begin(), m_children.end(), p);
 		if (it != m_children.end()) {
@@ -285,13 +286,20 @@ public:
 	}
 	const std::vector<Shape*>& GetChildren() { return m_children; }
 
-	void RemoveAllChildren() {
-		for (auto m : m_children) {
-			Point2F p = m->GetPos();
-			m->SetParent(NULL);
-			m->SetPos(p);
+	void RemoveAllChildren(bool del = false) {
+		if (del) {
+			while (!m_children.empty()) {
+				delete m_children.front();
+			}
 		}
-		m_children.clear();
+		else {
+			for (auto m : m_children) {
+				Point2F p = m->GetPos();
+				m->SetParent(NULL);
+				m->SetPos(p);
+			}
+			m_children.clear();
+		}
 	}
 
 

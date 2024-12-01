@@ -8,7 +8,7 @@ public:
 	const int m_screenWidth = 1920;
 	const int m_screenHeight = 1080;
 
-	const int m_numShapes = 1000;
+	const int m_numShapes = 5000;
 	const float m_maxRadius = 60.0f;
 	const float m_minRadius = 10.0f;
 
@@ -79,14 +79,7 @@ public:
 	}
 
 	void DeInit() override {
-		for (auto shape : m_movingShapes) {
-			delete shape;
-		}
 		m_movingShapes.clear();
-
-		for (auto shapepair : m_menuitems) {
-			delete shapepair.first;
-		}
 		m_menuitems.clear();
 	}
 

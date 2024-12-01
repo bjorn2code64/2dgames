@@ -208,25 +208,7 @@ public:
 	}
 
 	void DeInit() {
-		delete m_ship;
 		m_ship = NULL;
-
-		for (auto p : m_invaders)
-			delete p;
-		m_invaders.clear();
-
-		for (auto p : m_invaderBullets)
-			delete p;
-		m_invaderBullets.clear();
-
-		for (auto p : m_barriers)
-			delete p;
-		m_barriers.clear();
-
-		for (auto p : m_playerLifeIndicators) {
-			delete p;
-		}
-		m_playerLifeIndicators.clear();
 	}
 
 	bool D2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
