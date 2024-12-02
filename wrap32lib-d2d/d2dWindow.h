@@ -11,6 +11,7 @@
 
 #include "d2dbitmap.h"
 #include "d2dwrite.h"
+#include "Shape.h"
 
 #include <string>
 #include <queue>
@@ -43,7 +44,8 @@ public:
 		m_dwUpdateRate(dwUpdateRate),
 		m_rsFAR(0, 0),
 		m_updateTime(0),
-		m_updateCount(0)
+		m_updateCount(0),
+		m_shapeDrawFlags(0)
 	{}
 
 	~D2DWindow(void) {
@@ -84,7 +86,24 @@ public:
 
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONUP:
+			m_events.push(WindowEvent(uMsg, wParam, lParam));
+			break;
+
 		case WM_KEYDOWN:
+			if (::GetAsyncKeyState(VK_CONTROL) & 0x8000) {
+				if (wParam == 'G') {
+					if (m_shapeDrawFlags & SHAPEDRAW_SHOW_GROUP_BOUNDS)
+						m_shapeDrawFlags &= ~SHAPEDRAW_SHOW_GROUP_BOUNDS;
+					else
+						m_shapeDrawFlags |= SHAPEDRAW_SHOW_GROUP_BOUNDS;
+				}
+				else if (wParam == 'B') {
+					if (m_shapeDrawFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS)
+						m_shapeDrawFlags &= ~SHAPEDRAW_SHOW_BITMAP_BOUNDS;
+					else
+						m_shapeDrawFlags |= SHAPEDRAW_SHOW_BITMAP_BOUNDS;
+				}
+			}
 		case WM_KEYUP:
 			m_events.push(WindowEvent(uMsg, wParam, lParam));
 			break;
@@ -266,6 +285,8 @@ protected:
 	DWORD m_dwUpdateRate;	// in ms
 	Point2F m_ptMouse;				// Track the mouse position
 	std::queue<WindowEvent> m_events;
+
+	DWORD m_shapeDrawFlags;
 
 	ULONGLONG m_updateTime;		// Time spent in update function (ms)
 	ULONGLONG m_updateCount;	// Number of calls to update function

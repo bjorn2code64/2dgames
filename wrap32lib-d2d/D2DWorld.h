@@ -124,10 +124,10 @@ public:
 		return true;
 	}
 
-	virtual bool D2DRender(ID2D1HwndRenderTarget* pRenderTarget, D2DRectScaler* pRsFAR) {
+	virtual bool D2DRender(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, D2DRectScaler* pRsFAR) {
 		for (auto p : m_shapes)
 			if (p->IsActive())
-				p->Draw(pRenderTarget, pRsFAR);
+				p->Draw(pRenderTarget, dwFlags, pRsFAR);
 
 		return true;
 	}

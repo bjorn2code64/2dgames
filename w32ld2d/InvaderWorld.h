@@ -59,6 +59,13 @@ protected:
 
 	const COLORREF m_gameOverColour = RGB(255, 255, 255);
 
+	const enum class invaderType {
+		octopus,
+		crab,
+		squid,
+		explosion
+	};
+
 public:
 	InvaderWorld(Notifier& notifier) :
 		m_notifier(notifier),
@@ -67,7 +74,6 @@ public:
 		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
 		m_ship(NULL),
 		m_gone(NULL),
-		m_groupInvaders(Point2F(0.0f, 0.0f), 0, 0),
 
 		// tickers
 		m_tdInvaderMove(m_invaderMoveDelayStart),
@@ -92,12 +98,12 @@ public:
 	}
 
 	bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
-		m_bitmap1.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmap2.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmap3.LoadFromFile(pRenderTarget, pIWICFactory, L"crabClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmap4.LoadFromFile(pRenderTarget, pIWICFactory, L"crabOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmap5.LoadFromFile(pRenderTarget, pIWICFactory, L"squidClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmap6.LoadFromFile(pRenderTarget, pIWICFactory, L"squidOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapOctopus1.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapOctopus2.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapCrab1.LoadFromFile(pRenderTarget, pIWICFactory, L"crabClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapCrab2.LoadFromFile(pRenderTarget, pIWICFactory, L"crabOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapSquid1.LoadFromFile(pRenderTarget, pIWICFactory, L"squidClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapSquid2.LoadFromFile(pRenderTarget, pIWICFactory, L"squidOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmapUFO.LoadFromFile(pRenderTarget, pIWICFactory, L"UFO.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmapGone.LoadFromFile(pRenderTarget, pIWICFactory, L"invaderGone.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		return true;
@@ -118,37 +124,37 @@ public:
 		// Create the invaders
 		for (FLOAT x = 0; x < m_invaderCols; x++) {
 			for (int y = 0; y < m_invaderRows; y++) {
-				int invaderType = 0;
-				d2dBitmap* p = &m_bitmap5;
+				invaderType invType = invaderType::squid;
+				d2dBitmap* p = &m_bitmapSquid1;
 				if ((y == 1) || (y == 2)) {
-					p = &m_bitmap3;
-					invaderType = 1;
+					p = &m_bitmapCrab1;
+					invType = invaderType::crab;
 				}
 				else if ((y == 3) || (y == 4)) {
-					p = &m_bitmap1;
-					invaderType = 2;
+					p = &m_bitmapOctopus1;
+					invType = invaderType::octopus;
 				}
 
 				MovingBitmap* pInvader = new MovingBitmap(p,
-					Point2F(m_invaderBorder + x * (m_invaderWidth + m_invaderBorder),
-						m_invaderBorder + y * (m_invaderHeight + m_invaderBorder) + m_scoreY + m_shipY),
+					Point2F(x * (m_invaderWidth + m_invaderBorder),
+						y * (m_invaderHeight + m_invaderBorder)),
 					m_invaderWidth, m_invaderHeight,
-					0, 0,
-					m_invaderColour
+					0, 0
 				);
-				pInvader->SetUserData(invaderType);
+				pInvader->SetUserData((LPARAM)invType);
 				m_invaders.push_back(pInvader);
 				m_groupInvaders.AddChild(pInvader);
 			}
 		}
-		m_gone->SetUserData(3);
+		m_gone->SetUserData((LPARAM)invaderType::explosion);
 		m_gone->SetActive(false);
 		m_invaders.push_back(m_gone);
 		m_groupInvaders.AddChild(m_gone);
 
-		m_groupInvaders.SetPos(Point2F(0.0F, 0.0F));
+		m_groupInvaders.SetPos(Point2F(0.0f, m_scoreY + m_shipY));
 		m_groupInvaders.SetSpeed(m_invaderSpeed);
 		m_groupInvaders.SetDirectionInDeg(90);
+		m_groupInvaders.UpdateBounds();
 
 		QueueShape(&m_groupInvaders);
 
@@ -194,7 +200,6 @@ public:
 		QueueShape(&m_player);
 		QueueShape(&m_playerBullet);
 		QueueShape(m_ship, false);
-//		QueueShape(m_gone, false);
 		QueueShape(&m_textScore);
 		QueueShape(&m_textScoreLabel);
 		QueueShape(&m_textShipScore, false);
@@ -305,14 +310,14 @@ protected:
 			// Time for an invader move
 			// Replace the bitmap
 			for (auto* p : m_invaders) {
-				if (p->GetUserData() == 0) {
-					p->SetBitmap(m_frame ? &m_bitmap5 : &m_bitmap6);
+				if (p->GetUserData() == (LPARAM)invaderType::squid) {
+					p->SetBitmap(m_frame ? &m_bitmapSquid1 : &m_bitmapSquid2);
 				}
-				else if (p->GetUserData() == 1) {
-					p->SetBitmap(m_frame ? &m_bitmap3 : &m_bitmap4);
+				else if (p->GetUserData() == (LPARAM)invaderType::crab) {
+					p->SetBitmap(m_frame ? &m_bitmapCrab1 : &m_bitmapCrab2);
 				}
-				else if (p->GetUserData() == 2) {
-					p->SetBitmap(m_frame ? &m_bitmap1 : &m_bitmap2);
+				else if (p->GetUserData() == (LPARAM)invaderType::octopus) {
+					p->SetBitmap(m_frame ? &m_bitmapOctopus1 : &m_bitmapOctopus2);
 				}
 			}
 			m_frame = !m_frame;
@@ -349,7 +354,7 @@ protected:
 
 	void UpdateMovePlayerBullet() {
 		// Move the player bullet
-		if (m_playerBullet.IsActive()) {
+		if (m_playerBullet.IsActive() && m_playerBullet.GetUserData()) {
 			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
 				m_playerBullet.SetUserData(0);
 			}
@@ -367,18 +372,16 @@ protected:
 				}
 
 				// Did we hit an invader?
-				for (auto& inv : m_invaders) {
-					if (inv->IsActive() && inv->HitTestShape(m_playerBullet)) {
-						inv->SetActive(false);	// disable the invader
-						m_gone->SetPos(inv->GetPos(false));
-						m_gone->SetActive(true);
-						m_tdGone.SetActive(true);
-						m_playerBullet.SetUserData(0);
-						AddScore(score_invader_hit);
-						m_tdInvaderMove.AddTicks(-20);						// speed up the invaders a little
-						m_invaderBulletChance -= 1; // increase bullet chance
-						break;
-					}
+				auto invHit = m_groupInvaders.HitTestShape(m_playerBullet);
+				if (invHit) {
+					invHit->SetActive(false);	// disable the invader
+					m_gone->SetPos(invHit->GetPos(false));
+					m_gone->SetActive(true);
+					m_tdGone.SetActive(true);
+					m_playerBullet.SetUserData(0);
+					AddScore(score_invader_hit);
+					m_tdInvaderMove.AddTicks(-20);						// speed up the invaders a little
+					m_invaderBulletChance -= 1; // increase bullet chance
 				}
 
 				// Did we hit a ship at the top?
@@ -414,9 +417,10 @@ protected:
 					it = m_invaderBullets.erase(it);	// remove the bullet
 					continue;
 				}
+
 				(*it)->Move();
 
-				// did we hit a barrier?
+				// Did we hit a barrier?
 				bool hitBarrier = false;
 				for (auto pBarrier : m_barriers) {
 					if (pBarrier->IsActive()) {
@@ -514,14 +518,15 @@ protected:
 	MovingRectangle m_player;
 	MovingRectangle m_playerBullet;
 	std::vector<Shape*> m_playerLifeIndicators;
-	MovingGroup m_groupInvaders;
 	std::vector<MovingBitmap*> m_invaders;
+	MovingGroup m_groupInvaders;
 	std::vector<Shape*> m_invaderBullets;
 	MovingBitmap* m_ship;
 	MovingBitmap* m_gone;
 	MovingText m_textScore;
 	MovingText m_textScoreLabel;
 	std::vector<Shape*> m_barriers;
+	MovingGroup m_groupBarriers[4];
 
 	TickDelta m_tdInvaderMove;
 	TickDelta m_tdPlayerReset;
@@ -531,12 +536,12 @@ protected:
 	MovingText m_textShipScore;
 	MovingText m_textGameOver;
 
-	d2dBitmap m_bitmap1;
-	d2dBitmap m_bitmap2;
-	d2dBitmap m_bitmap3;
-	d2dBitmap m_bitmap4;
-	d2dBitmap m_bitmap5;
-	d2dBitmap m_bitmap6;
+	d2dBitmap m_bitmapOctopus1;
+	d2dBitmap m_bitmapOctopus2;
+	d2dBitmap m_bitmapCrab1;
+	d2dBitmap m_bitmapCrab2;
+	d2dBitmap m_bitmapSquid1;
+	d2dBitmap m_bitmapSquid2;
 	d2dBitmap m_bitmapGone;
 	d2dBitmap m_bitmapUFO;
 

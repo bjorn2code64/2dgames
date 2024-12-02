@@ -13,7 +13,7 @@ public:
 		return distSq <= m_fRadius * m_fRadius;
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
 		D2D1_ELLIPSE e;
 		e.point = GetPos();
 		if (pRS)	pRS->Scale(&e.point);
@@ -23,7 +23,7 @@ public:
 		e.radiusX = e.radiusY = r;
 
 		pRenderTarget->FillEllipse(&e, GetBrush());
-		__super::Draw(pRenderTarget, pRS);
+		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
@@ -170,7 +170,7 @@ public:
 	void SetWidth(FLOAT f) { m_fWidth = f; }
 	void SetHeight(FLOAT f) { m_fHeight = f; }
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, const D2DRectScaler* pRS = NULL) override {
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
 		if (pRS) {
@@ -185,11 +185,11 @@ public:
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
 		pRenderTarget->FillRectangle(&r, GetBrush());
-		__super::Draw(pRenderTarget, pRS);
+		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
-		Draw(pRenderTarget, GetPos(), pRS);
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
+		Draw(pRenderTarget, GetPos(), dwFlags, pRS);
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
@@ -207,15 +207,15 @@ protected:
 class MovingBitmap : public Shape
 {
 public:
-	MovingBitmap(d2dBitmap* bitmap, const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_bitmap(bitmap), Shape(pos, speed, dir, rgb, alpha, userdata), m_fWidth(width), m_fHeight(height) {
+	MovingBitmap(d2dBitmap* bitmap, const Point2F& pos, float width, float height, float speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		m_bitmap(bitmap), Shape(pos, speed, dir, RGB(255, 0, 255), alpha, userdata), m_fWidth(width), m_fHeight(height) {
 	}
 
 	void SetBitmap(d2dBitmap* bitmap) {
 		m_bitmap = bitmap;
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
 		Point2F pos = GetPos();
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
@@ -231,7 +231,10 @@ public:
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
 		m_bitmap->Render(pRenderTarget, r);
-		__super::Draw(pRenderTarget, pRS);
+		if (dwFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS) {
+			pRenderTarget->DrawRectangle(&r, GetBrush());
+		}
+		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
@@ -286,7 +289,7 @@ public:
 		m_text = wsz;
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) override {
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
 		Point2F pos = GetPos();
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
@@ -302,7 +305,7 @@ public:
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
 		pRenderTarget->DrawTextW(m_text.c_str(), (UINT32)m_text.length(), m_pWTF, r, m_pBrush);
-		__super::Draw(pRenderTarget, pRS);
+		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
 	virtual void GetBoundingBox(RectF* pRect, const Point2F& pos) const {
@@ -323,7 +326,73 @@ protected:
 class MovingGroup : public MovingRectangle {
 public:
 	// Set width/height to !0 to debug where the shape is
-	MovingGroup(const Point2F& pos, float speed, int dir, LPARAM userdata = 0) :
-		MovingRectangle(pos, 0.0f, 0.0f, speed, dir, RGB(255, 0, 255), 1.0F, userdata) {
+	MovingGroup() :
+		MovingRectangle(Point2F(0.0f, 0.0f), 0.0f, 0.0f, 0.0f, 0, RGB(255, 0, 255), 1.0F, 0)
+	{
 	}
+
+	MovingGroup(const Point2F& pos, float speed, int dir, LPARAM userdata = 0) :
+		MovingRectangle(pos, 0.0f, 0.0f, speed, dir, RGB(255, 0, 255), 1.0F, userdata)
+	{
+	}
+
+	void UpdateBounds() {
+		if (!m_rectChildBounds.IsEmpty()) {
+			return;
+		}
+
+		RectF r;
+		for (auto c : GetChildren()) {
+			if (c->IsActive()) {
+				c->GetBoundingBox(&r, c->GetPos(false));
+				if (m_rectChildBounds.IsEmpty()) {
+					m_rectChildBounds = r;
+				}
+				else {
+					m_rectChildBounds.UnionRect(r);
+				}
+			}
+		}
+		SetWidth(m_rectChildBounds.right);
+		SetHeight(m_rectChildBounds.bottom);
+		m_rectChildBounds.Offset(GetPos());
+	}
+
+	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
+		if (dwFlags & SHAPEDRAW_SHOW_GROUP_BOUNDS) {
+			FLOAT fWidth = m_fWidth;
+			FLOAT fHeight = m_fHeight;
+			if (pRS) {
+				pRS->Scale(&pos);
+				pRS->ScaleNoOffset(&fWidth);
+				pRS->ScaleNoOffset(&fHeight);
+			}
+
+			D2D1_RECT_F r;
+			r.left = pos.x;
+			r.right = pos.x + fWidth;
+			r.top = pos.y;
+			r.bottom = pos.y + fHeight;
+			pRenderTarget->DrawRectangle(&r, GetBrush());
+		}
+		Shape::Draw(pRenderTarget, dwFlags, pRS);
+	}
+
+	Shape* HitTestShape(const Shape& shape) {
+		UpdateBounds();
+
+		// Quick group bounds check first
+		RectF rShape;
+		shape.GetBoundingBox(&rShape, shape.GetPos());
+		if (!m_rectChildBounds.hitTest(rShape))
+			return NULL;
+
+		for (auto c : GetChildren()) {
+			if (c->IsActive() && c->HitTest(rShape)) {
+				return c;
+			}
+		}
+		return NULL;
+	}
+
 };

@@ -4,6 +4,9 @@
 #define _USE_MATH_DEFINES	// for M_PI
 #include <math.h>
 
+#define SHAPEDRAW_SHOW_GROUP_BOUNDS		0x0001
+#define SHAPEDRAW_SHOW_BITMAP_BOUNDS	0x0002
+
 class Vector2F {
 public:
 	FLOAT x, y;
@@ -77,7 +80,8 @@ public:
 	};
 
 	Shape(const Point2F& pos, float speed, int direction, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_pos(pos), m_fSpeed(speed), m_parent(NULL), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(true)
+		m_pos(pos), m_fSpeed(speed), m_parent(NULL), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(true),
+		m_rectChildBounds(0, 0, 0, 0)
 	{
 		SetDirectionInDeg(direction);
 	}
@@ -97,7 +101,12 @@ public:
 		return ret;
 	}
 
-	void SetPos(const Point2F& pos) { m_pos = pos; }
+	void SetPos(const Point2F& pos) {
+		m_pos = pos;
+		if (m_parent) {
+			m_parent->ChildHasMoved();
+		}
+	}
 	void OffsetPos(const Point2F& pos) { m_pos += pos; }
 
 	void SetDirectionInDeg(int directionInDeg) {
@@ -140,6 +149,9 @@ public:
 		m_pos.y += m_cacheStep.y;
 		for (auto& c : m_children) {
 			c->Move();
+		}
+		if (m_parent) {
+			m_parent->ChildHasMoved();
 		}
 	}
 
@@ -193,7 +205,12 @@ public:
 	void SetUserData(LPARAM l) { m_userdata = l; }
 	LPARAM GetUserData() { return m_userdata; }
 
-	void SetActive(bool b) { m_active = b; }
+	void SetActive(bool b) {
+		m_active = b;
+		if (m_parent) {
+			m_parent->ChildHasMoved();
+		}
+	}
 	bool IsActive() { return m_active; }
 
 	// Resources and drawing
@@ -212,16 +229,16 @@ public:
 
 	ID2D1SolidColorBrush* GetBrush() { return m_pBrush; }
 
-	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, const D2DRectScaler* pRS = NULL) {
+	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) {
 		for (auto m : m_children) {
 			if (m->IsActive())
-				m->Draw(pRenderTarget, pRS);
+				m->Draw(pRenderTarget, dwFlags, pRS);
 		}
 	}
-	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, const D2DRectScaler* pRS = NULL) {
+	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) {
 		for (auto m : m_children) {
 			if (m->IsActive())
-				m->Draw(pRenderTarget, pos, pRS);
+				m->Draw(pRenderTarget, pos, dwFlags, pRS);
 		}
 	}
 
@@ -302,27 +319,35 @@ public:
 		}
 	}
 
+	void ChildHasMoved() {
+		m_rectChildBounds.SetEmpty();
+	}
 
 protected:
 	void UpdateCache() {
-		//		char buff[256];
-		//		snprintf(buff, 256, "deg %f rad %f\n", RadToDeg(m_direction), m_direction);
-		//		OutputDebugStringA(buff);
 		m_cacheStep = Vector2F((FLOAT)sin(m_direction), (FLOAT)-cos(m_direction)) * m_fSpeed;
 	}
 
 protected:
 	Point2F m_pos;			// Current position
 	double m_direction;		// Held in radians
+
 	FLOAT m_fSpeed;			// Movement speed
 	Vector2F m_cacheStep;	// Cache the move vector so we're not doing constant Trig
+
+	// Colour
 	ID2D1SolidColorBrush* m_pBrush;
 	UINT32 m_rgb;
 	FLOAT m_alpha;
-	LPARAM m_userdata;
+
+	// Is it drawn?
 	bool m_active;
 
+	// User settable id
+	LPARAM m_userdata;
+
 	// Heirarchy support
-	std::vector<Shape*> m_children;
 	Shape* m_parent;
+	std::vector<Shape*> m_children;
+	RectF m_rectChildBounds;	// For quick group hit test
 };

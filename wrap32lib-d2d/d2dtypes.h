@@ -48,7 +48,7 @@ public:
 class RectF : public D2D1_RECT_F
 {
 public:
-	RectF() { left = top = right = bottom = 0.0f; }
+	RectF() { SetEmpty(); }
 	RectF(FLOAT l, FLOAT t, FLOAT w, FLOAT h) { left = l; top = t; right = l + w; bottom = t + h; }
 
 	Point2F TopLeft() { return Point2F(left, top); }
@@ -76,6 +76,28 @@ public:
 		corners.push_back(TopRight());
 		corners.push_back(BottomLeft());
 		corners.push_back(BottomRight());
+	}
+
+	void SetEmpty() {
+		left = top = right = bottom = 0.0f;
+	}
+
+	bool IsEmpty() {
+		return left == 0.0f && right == 0.0f && top == 0.0f && bottom == 0.0f;
+	}
+
+	void UnionRect(const RectF& rhs) {
+		if (rhs.left < left) left = rhs.left;
+		if (rhs.top < top) top = rhs.top;
+		if (rhs.right > right) right = rhs.right;
+		if (rhs.bottom > bottom) bottom = rhs.bottom;
+	}
+
+	void Offset(const Point2F& point) {
+		left += point.x;
+		right += point.x;
+		top += point.y;
+		bottom += point.y;
 	}
 };
 

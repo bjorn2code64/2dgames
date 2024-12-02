@@ -125,8 +125,7 @@ public:
 				if (isBrick) {
 					if (bitmap) {
 						MovingBitmap* pBrick = new MovingBitmap(bitmap, Point2F(x * m_brickWidth, y * m_brickHeight),
-							m_brickWidth, m_brickHeight, 0, 0,
-							brickColor
+							m_brickWidth, m_brickHeight, 0, 0
 						);
 						m_bricks.push_back(pBrick);
 						QueueShape(pBrick);

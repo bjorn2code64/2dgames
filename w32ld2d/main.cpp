@@ -87,7 +87,7 @@ protected:
 		D2DGetFARRect(&rectBounds);
 		pRenderTarget->DrawRectangle(rectBounds, m_pBrush);
 
-		m_worldActive->D2DRender(pRenderTarget, &m_rsFAR);
+		m_worldActive->D2DRender(pRenderTarget, m_shapeDrawFlags, &m_rsFAR);
 	}
 
 	void D2DOnDiscardResources() override {
