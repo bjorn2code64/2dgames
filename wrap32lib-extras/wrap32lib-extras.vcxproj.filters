@@ -21,9 +21,6 @@
     <ClInclude Include="WLSyslink.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GDIPrinter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Doc.h">
       <Filter>Header Files</Filter>
     </ClInclude>

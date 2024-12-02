@@ -19,32 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CommonControl.cpp" />
-    <ClCompile Include="Dialog.cpp" />
-    <ClCompile Include="ResourceStrings.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="WindowExt.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ComboBox.h" />
-    <ClInclude Include="CommonControl.h" />
-    <ClInclude Include="Dialog.h" />
-    <ClInclude Include="Edit.h" />
-    <ClInclude Include="GDI.h" />
-    <ClInclude Include="GridView.h" />
-    <ClInclude Include="ListBox.h" />
-    <ClInclude Include="ListView.h" />
-    <ClInclude Include="Menu.h" />
     <ClInclude Include="Notifier.h" />
-    <ClInclude Include="Resizer.h" />
-    <ClInclude Include="ResourceStrings.h" />
-    <ClInclude Include="Splitter.h" />
-    <ClInclude Include="StatusBar.h" />
-    <ClInclude Include="TabControl.h" />
-    <ClInclude Include="ToolBar.h" />
-    <ClInclude Include="ToolTip.h" />
-    <ClInclude Include="TreeView.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="Window.h" />
     <ClInclude Include="WindowExt.h" />

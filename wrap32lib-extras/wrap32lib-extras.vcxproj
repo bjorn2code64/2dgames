@@ -166,7 +166,6 @@
     <ClInclude Include="DialogFile.h" />
     <ClInclude Include="DlgAbout.h" />
     <ClInclude Include="Doc.h" />
-    <ClInclude Include="GDIPrinter.h" />
     <ClInclude Include="WindowSaverExt.h" />
     <ClInclude Include="WLSyslink.h" />
   </ItemGroup>
