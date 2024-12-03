@@ -337,25 +337,33 @@ public:
 	}
 
 	void UpdateBounds() {
-		if (!m_rectChildBounds.IsEmpty()) {
+		if (!m_childHasMoved) {
 			return;
 		}
 
+		RectF rChildren;
+
 		RectF r;
 		for (auto c : GetChildren()) {
-			if (c->IsActive()) {
-				c->GetBoundingBox(&r, c->GetPos(false));
-				if (m_rectChildBounds.IsEmpty()) {
-					m_rectChildBounds = r;
-				}
-				else {
-					m_rectChildBounds.UnionRect(r);
-				}
+			c->GetBoundingBox(&r, c->GetPos(false));
+			if (rChildren.IsEmpty()) {
+				rChildren = r;
+			}
+			else {
+				rChildren.UnionRect(r);
 			}
 		}
-		SetWidth(m_rectChildBounds.right);
-		SetHeight(m_rectChildBounds.bottom);
-		m_rectChildBounds.Offset(GetPos());
+		Point2F ptOffset(Point2F(rChildren.left, rChildren.top));
+		if (!ptOffset.Empty()) {
+			OffsetPos(ptOffset);
+			ptOffset = Point2F(-rChildren.left, -rChildren.top);
+			for (auto c : m_children) {
+				c->OffsetPos(ptOffset);	// move everything back
+			}
+		}
+		SetWidth(rChildren.Width());
+		SetHeight(rChildren.Height());
+//		m_rectChildBounds.Offset(GetPos());
 	}
 
 	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
@@ -378,13 +386,21 @@ public:
 		Shape::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
+	moveResult WillHitBounds(const w32Size& screenSize) {
+		UpdateBounds();
+		return __super::WillHitBounds(screenSize, GetPos());
+	}
+
 	Shape* HitTestShape(const Shape& shape) {
 		UpdateBounds();
+
+		RectF rThis;
+		GetBoundingBox(&rThis, GetPos());
 
 		// Quick group bounds check first
 		RectF rShape;
 		shape.GetBoundingBox(&rShape, shape.GetPos());
-		if (!m_rectChildBounds.hitTest(rShape))
+		if (!rThis.hitTest(rShape))
 			return NULL;
 
 		for (auto c : GetChildren()) {
@@ -395,4 +411,25 @@ public:
 		return NULL;
 	}
 
+	int HitTestShapes(const Shape& shape, std::vector<Shape*>& ret) {
+		UpdateBounds();
+
+		RectF rThis;
+		GetBoundingBox(&rThis, GetPos());
+
+		// Quick group bounds check first
+		RectF rShape;
+		shape.GetBoundingBox(&rShape, shape.GetPos());
+		if (!rThis.hitTest(rShape))
+			return 0;
+
+		int count = 0;
+		for (auto c : GetChildren()) {
+			if (c->IsActive() && c->HitTest(rShape)) {
+				ret.push_back(c);
+				count++;
+			}
+		}
+		return count;
+	}
 };

@@ -42,7 +42,7 @@ protected:
 	const FLOAT m_invaderHeight = 40.0f;
 	const FLOAT m_invaderBorder = 10.0f;
 	const FLOAT m_invaderbulletSpeed = 15.0f;
-	const int m_invaderBulletChanceStart = 80;	// 1 in xxx
+	const DWORD m_invadersBulletChanceStart = 80;	// 1 in xxx
 	const int m_invaderCols = 10;
 	const int m_invaderRows = 5;
 	const int m_invaderMoveDelayStart = 1000;	// in ms
@@ -115,7 +115,7 @@ public:
 		m_livesRemaining = m_playerLives;
 		m_player.SetPos(m_playerStart);
 		m_frame = false;
-		m_invaderBulletChance = m_invaderBulletChanceStart;
+		m_invadersBulletChance = m_invadersBulletChanceStart;
 
 		// Create Game Objects
 		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, 0);
@@ -142,14 +142,11 @@ public:
 					0, 0
 				);
 				pInvader->SetUserData((LPARAM)invType);
-				m_invaders.push_back(pInvader);
 				m_groupInvaders.AddChild(pInvader);
 			}
 		}
 		m_gone->SetUserData((LPARAM)invaderType::explosion);
 		m_gone->SetActive(false);
-		m_invaders.push_back(m_gone);
-		m_groupInvaders.AddChild(m_gone);
 
 		m_groupInvaders.SetPos(Point2F(0.0f, m_scoreY + m_shipY));
 		m_groupInvaders.SetSpeed(m_invaderSpeed);
@@ -165,17 +162,18 @@ public:
 			FLOAT divBarrierHeight = m_barrierHeight / m_barrierDividerY;
 			FLOAT startX = step / 2.0f + step * i - m_barrierWidth / 2;
 			FLOAT startY = m_barrierY;
-
+			m_groupBarriers[i].SetPos(Point2F(startX, startY));
 			for (int x = 0; x < m_barrierDividerX; x++) {
 				for (int y = 0; y < m_barrierDividerY; y++) {
 					auto barrier = new MovingRectangle(
-						Point2F(startX + x * divBarrierWidth, startY + y * divBarrierHeight),
-						divBarrierWidth + 1.0F, divBarrierHeight + 1.0F, 0.0F, 0, m_barrierColour);
+						Point2F(x * divBarrierWidth, y * divBarrierHeight),
+						divBarrierWidth + 1.0F, divBarrierHeight + 1.0F,
+						0.0F, 0, m_barrierColour);
 
-					m_barriers.push_back(barrier);
-					QueueShape(barrier);
+					m_groupBarriers[i].AddChild(barrier);
 				}
 			}
+			QueueShape(&m_groupBarriers[i]);
 		}
 
 		// Create the player life indicators
@@ -213,6 +211,7 @@ public:
 	}
 
 	void DeInit() {
+		m_gone = NULL;
 		m_ship = NULL;
 	}
 
@@ -309,29 +308,21 @@ protected:
 		if (m_tdInvaderMove.Elapsed(tick)) {
 			// Time for an invader move
 			// Replace the bitmap
-			for (auto* p : m_invaders) {
+			for (auto* p : m_groupInvaders.GetChildren()) {
 				if (p->GetUserData() == (LPARAM)invaderType::squid) {
-					p->SetBitmap(m_frame ? &m_bitmapSquid1 : &m_bitmapSquid2);
+					((MovingBitmap*)p)->SetBitmap(m_frame ? &m_bitmapSquid1 : &m_bitmapSquid2);
 				}
 				else if (p->GetUserData() == (LPARAM)invaderType::crab) {
-					p->SetBitmap(m_frame ? &m_bitmapCrab1 : &m_bitmapCrab2);
+					((MovingBitmap*)p)->SetBitmap(m_frame ? &m_bitmapCrab1 : &m_bitmapCrab2);
 				}
 				else if (p->GetUserData() == (LPARAM)invaderType::octopus) {
-					p->SetBitmap(m_frame ? &m_bitmapOctopus1 : &m_bitmapOctopus2);
+					((MovingBitmap*)p)->SetBitmap(m_frame ? &m_bitmapOctopus1 : &m_bitmapOctopus2);
 				}
 			}
 			m_frame = !m_frame;
 
 			// Check if they move, will any of them hit the end.
-			for (auto* p : m_invaders) {
-				if (p->IsActive()) {
-					if (p->WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
-						hitEnd = true;
-					}
-				}
-			}
-
-			if (hitEnd) {
+			if (m_groupInvaders.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
 				// Move invaders down and send them back the other way
 				m_groupInvaders.BounceX();
 				m_groupInvaders.OffsetPos(Point2F(0.0f, 60.0f));
@@ -362,30 +353,33 @@ protected:
 				m_playerBullet.Move();
 
 				// Did we hit a barrier
-				for (auto pBarrier : m_barriers) {
-					if (pBarrier->IsActive()) {
-						if (m_playerBullet.HitTestShape(*pBarrier)) {
-							pBarrier->SetActive(false);
-							m_playerBullet.SetUserData(0);	// Reset the player bullet
+				for (auto& g : m_groupBarriers) {
+					std::vector<Shape*> hits;
+					if (g.HitTestShapes(m_playerBullet, hits)) {
+						for (auto barrierHit : hits) {
+							g.RemoveChild(barrierHit);
+							delete barrierHit;
 						}
+						m_playerBullet.SetUserData(0);	// Reset the player bullet
 					}
 				}
 
 				// Did we hit an invader?
 				auto invHit = m_groupInvaders.HitTestShape(m_playerBullet);
 				if (invHit) {
-					invHit->SetActive(false);	// disable the invader
+					m_groupInvaders.RemoveChild(invHit);	// Delete the invader
+					delete invHit;
 					m_gone->SetPos(invHit->GetPos(false));
 					m_gone->SetActive(true);
 					m_tdGone.SetActive(true);
 					m_playerBullet.SetUserData(0);
 					AddScore(score_invader_hit);
 					m_tdInvaderMove.AddTicks(-20);						// speed up the invaders a little
-					m_invaderBulletChance -= 1; // increase bullet chance
+					m_invadersBulletChance -= 1; // increase bullet chance
 				}
 
 				// Did we hit a ship at the top?
-				if (m_ship && m_ship->IsActive() && m_ship->HitTestShape(m_playerBullet)) {
+				if (m_ship && m_ship->IsActive() && m_ship->HitTestShape(m_playerBullet)) { 
 					m_ship->SetActive(false);
 					m_playerBullet.SetUserData(0);
 
@@ -422,12 +416,14 @@ protected:
 
 				// Did we hit a barrier?
 				bool hitBarrier = false;
-				for (auto pBarrier : m_barriers) {
-					if (pBarrier->IsActive()) {
-						if ((*it)->HitTestShape(*pBarrier)) {
-							hitBarrier = true;
-							pBarrier->SetActive(false);
+				for (auto& g : m_groupBarriers) {
+					std::vector<Shape*> hits;
+					if (g.HitTestShapes(**it, hits)) {
+						for (auto barrierHit : hits) {
+							g.RemoveChild(barrierHit);
+							delete barrierHit;
 						}
+						hitBarrier = true;
 					}
 				}
 
@@ -462,25 +458,18 @@ protected:
 
 	void UpdateFireInvaderBullets() {
 		// For each active invader, fire a bullet randomly
-		// Count the remaining invaders
-		int invaderCount = 0;
-		for (auto p : m_invaders) {
-			if (p->IsActive())
-				invaderCount++;
-		}
+		auto& invaders = m_groupInvaders.GetChildren();
+		DWORD bulletChance = (DWORD)(m_invadersBulletChance * invaders.size());
+		for (auto inv : invaders) {
+			if (!w32rand(bulletChance)) {
+				Point2F ptBullet = inv->GetPos();
+				ptBullet.x += (m_invaderWidth - m_bulletWidth) / 2;
+				MovingRectangle* bullet = new MovingRectangle(
+					ptBullet, m_bulletWidth, m_bulletHeight, m_invaderbulletSpeed, 180, m_bulletColour
+				);
 
-		for (auto p : m_invaders) {
-			if (p->IsActive()) {
-				if (!w32rand(m_invaderBulletChance * invaderCount)) {
-					Point2F ptBullet = p->GetPos();
-					ptBullet.x += (m_invaderWidth - m_bulletWidth) / 2;
-					MovingRectangle* bullet = new MovingRectangle(
-						ptBullet, m_bulletWidth, m_bulletHeight, m_invaderbulletSpeed, 180, m_bulletColour
-					);
-
-					m_invaderBullets.push_back(bullet);
-					QueueShape(bullet);
-				}
+				m_invaderBullets.push_back(bullet);
+				QueueShape(bullet);
 			}
 		}
 	}
@@ -518,14 +507,12 @@ protected:
 	MovingRectangle m_player;
 	MovingRectangle m_playerBullet;
 	std::vector<Shape*> m_playerLifeIndicators;
-	std::vector<MovingBitmap*> m_invaders;
 	MovingGroup m_groupInvaders;
 	std::vector<Shape*> m_invaderBullets;
 	MovingBitmap* m_ship;
 	MovingBitmap* m_gone;
 	MovingText m_textScore;
 	MovingText m_textScoreLabel;
-	std::vector<Shape*> m_barriers;
 	MovingGroup m_groupBarriers[4];
 
 	TickDelta m_tdInvaderMove;
@@ -545,7 +532,7 @@ protected:
 	d2dBitmap m_bitmapGone;
 	d2dBitmap m_bitmapUFO;
 
-	int m_invaderBulletChance;
+	DWORD m_invadersBulletChance;
 	int m_score;
 	int m_livesRemaining;
 

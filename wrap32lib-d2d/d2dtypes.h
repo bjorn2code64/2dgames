@@ -43,6 +43,7 @@ public:
 	double angleradTo(const Point2F& rhs) const {
 		return M_PI_2 + atan2(y - rhs.y, x - rhs.x);
 	}
+	bool Empty() { return x == 0.0f && y == 0.0f;  }
 };
 
 class RectF : public D2D1_RECT_F

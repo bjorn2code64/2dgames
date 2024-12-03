@@ -81,7 +81,7 @@ public:
 
 	Shape(const Point2F& pos, float speed, int direction, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
 		m_pos(pos), m_fSpeed(speed), m_parent(NULL), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(true),
-		m_rectChildBounds(0, 0, 0, 0)
+		m_childHasMoved(true)
 	{
 		SetDirectionInDeg(direction);
 	}
@@ -300,6 +300,7 @@ public:
 		if (it != m_children.end()) {
 			m_children.erase(it);
 		}
+		ChildHasMoved();
 	}
 	const std::vector<Shape*>& GetChildren() { return m_children; }
 
@@ -320,7 +321,7 @@ public:
 	}
 
 	void ChildHasMoved() {
-		m_rectChildBounds.SetEmpty();
+		m_childHasMoved = true;
 	}
 
 protected:
@@ -349,5 +350,5 @@ protected:
 	// Heirarchy support
 	Shape* m_parent;
 	std::vector<Shape*> m_children;
-	RectF m_rectChildBounds;	// For quick group hit test
+	bool m_childHasMoved;
 };
