@@ -1,16 +1,21 @@
-# d2dgames
-C++ Retro Games for Windows 
+# ShapeShifter2D
 
-Uses some base libraries (included)
+## C++ 2D Game Engine for Windows + Games
 
-- wrap32lib - base Windows util functions
-- wrap32lib-gui - C++ Window classes
-- wrap32lib-file - C++ Windows file classes
-- wrap32lib-d2d - Direct2D classes
-- wrap32lib-extras - Extra classes that depend on more than one of the above
+### Libraries
 
-- w32ld2d - The main program.
+- ss2dtest - The main program.
+- wrap32lib-d2d - Direct2D
+- wrap32lib-extras - Extras that depend on the other wrap32 libraries
+- wrap32lib-file - File
+- wrap32lib-gui - Window / UI
+- wrap32lib - Base and Utility
+
+### Library layout:
+
+![ss2d libraries](ss2dlibraries.png)
 
 Developed for fun on stream at
 
 https://twitch.tv/bjorn2code64
+

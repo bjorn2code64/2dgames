@@ -337,6 +337,7 @@ public:
 	}
 
 	void UpdateBounds() {
+		// Resizes the group to contain everything in it
 		if (!m_childHasMoved) {
 			return;
 		}
@@ -428,6 +429,37 @@ public:
 			if (c->IsActive() && c->HitTest(rShape)) {
 				ret.push_back(c);
 				count++;
+			}
+		}
+		return count;
+	}
+
+	int WillHitShapes(const Shape& shape, std::vector<Shape*>& ret) {
+		UpdateBounds();
+
+		Point2F pos = GetPos();
+		MovePos(pos);
+
+		RectF rThis;
+		GetBoundingBox(&rThis, pos);
+
+		// Quick group bounds check first
+		RectF rShape;
+		pos = shape.GetPos();
+		shape.MovePos(pos);
+		shape.GetBoundingBox(&rShape, pos);
+		if (!rThis.hitTest(rShape))
+			return 0;
+
+		int count = 0;
+		for (auto c : GetChildren()) {
+			if (c->IsActive()) {
+				pos = c->GetPos();
+				c->MovePos(pos);
+				if (c->HitTest(rShape)) {
+					ret.push_back(c);
+					count++;
+				}
 			}
 		}
 		return count;

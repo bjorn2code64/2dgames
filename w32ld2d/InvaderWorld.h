@@ -63,7 +63,7 @@ protected:
 		octopus,
 		crab,
 		squid,
-		explosion
+		hit
 	};
 
 public:
@@ -73,14 +73,14 @@ public:
 		m_player(m_playerStart, m_playerWidth, m_playerHeight, 0, 0, m_playerColour),
 		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
 		m_ship(NULL),
-		m_gone(NULL),
+		m_hit(NULL),
 
 		// tickers
 		m_tdInvaderMove(m_invaderMoveDelayStart),
 		m_tdPlayerReset(m_playerResetTime, false),
 		m_tdShip(m_shipSpawnTime),
 		m_tdShipScore(2000, false),
-		m_tdGone(100, false),
+		m_tdHit(100, false),
 
 		// Texts
 		m_textScore(L"", Point2F(0.0f, m_textHeight * 1.5f), 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_textColour),
@@ -98,14 +98,14 @@ public:
 	}
 
 	bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
-		m_bitmapOctopus1.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmapOctopus2.LoadFromFile(pRenderTarget, pIWICFactory, L"octopusOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmapCrab1.LoadFromFile(pRenderTarget, pIWICFactory, L"crabClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmapCrab2.LoadFromFile(pRenderTarget, pIWICFactory, L"crabOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmapSquid1.LoadFromFile(pRenderTarget, pIWICFactory, L"squidClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmapSquid2.LoadFromFile(pRenderTarget, pIWICFactory, L"squidOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapOctopus[0].LoadFromFile(pRenderTarget, pIWICFactory, L"octopusClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapOctopus[1].LoadFromFile(pRenderTarget, pIWICFactory, L"octopusOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapCrab[0].LoadFromFile(pRenderTarget, pIWICFactory, L"crabClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapCrab[1].LoadFromFile(pRenderTarget, pIWICFactory, L"crabOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapSquid[0].LoadFromFile(pRenderTarget, pIWICFactory, L"squidClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapSquid[1].LoadFromFile(pRenderTarget, pIWICFactory, L"squidOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmapUFO.LoadFromFile(pRenderTarget, pIWICFactory, L"UFO.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
-		m_bitmapGone.LoadFromFile(pRenderTarget, pIWICFactory, L"invaderGone.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
+		m_bitmapHit.LoadFromFile(pRenderTarget, pIWICFactory, L"invaderGone.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		return true;
 	}
 
@@ -114,86 +114,17 @@ public:
 		m_score = 0;
 		m_livesRemaining = m_playerLives;
 		m_player.SetPos(m_playerStart);
-		m_frame = false;
+		m_frame = 0;
 		m_invadersBulletChance = m_invadersBulletChanceStart;
 
 		// Create Game Objects
 		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, 0);
-		m_gone = new MovingBitmap(&m_bitmapGone, Point2F(0, 0), m_invaderWidth, m_invaderHeight, m_invaderSpeed, 90, 0);
 
-		// Create the invaders
-		for (FLOAT x = 0; x < m_invaderCols; x++) {
-			for (int y = 0; y < m_invaderRows; y++) {
-				invaderType invType = invaderType::squid;
-				d2dBitmap* p = &m_bitmapSquid1;
-				if ((y == 1) || (y == 2)) {
-					p = &m_bitmapCrab1;
-					invType = invaderType::crab;
-				}
-				else if ((y == 3) || (y == 4)) {
-					p = &m_bitmapOctopus1;
-					invType = invaderType::octopus;
-				}
+		CreateInvaders();
 
-				MovingBitmap* pInvader = new MovingBitmap(p,
-					Point2F(x * (m_invaderWidth + m_invaderBorder),
-						y * (m_invaderHeight + m_invaderBorder)),
-					m_invaderWidth, m_invaderHeight,
-					0, 0
-				);
-				pInvader->SetUserData((LPARAM)invType);
-				m_groupInvaders.AddChild(pInvader);
-			}
-		}
-		m_gone->SetUserData((LPARAM)invaderType::explosion);
-		m_gone->SetActive(false);
+		CreateBarriers();
 
-		m_groupInvaders.SetPos(Point2F(0.0f, m_scoreY + m_shipY));
-		m_groupInvaders.SetSpeed(m_invaderSpeed);
-		m_groupInvaders.SetDirectionInDeg(90);
-		m_groupInvaders.UpdateBounds();
-
-		QueueShape(&m_groupInvaders);
-
-		// Create the barriers as grids of destructable rectangles
-		FLOAT step = (FLOAT)m_screenWidth / (FLOAT)m_barrierCount;
-		for (int i = 0; i < m_barrierCount; i++) {
-			FLOAT divBarrierWidth = m_barrierWidth / m_barrierDividerX;
-			FLOAT divBarrierHeight = m_barrierHeight / m_barrierDividerY;
-			FLOAT startX = step / 2.0f + step * i - m_barrierWidth / 2;
-			FLOAT startY = m_barrierY;
-			m_groupBarriers[i].SetPos(Point2F(startX, startY));
-			for (int x = 0; x < m_barrierDividerX; x++) {
-				for (int y = 0; y < m_barrierDividerY; y++) {
-					auto barrier = new MovingRectangle(
-						Point2F(x * divBarrierWidth, y * divBarrierHeight),
-						divBarrierWidth + 1.0F, divBarrierHeight + 1.0F,
-						0.0F, 0, m_barrierColour);
-
-					m_groupBarriers[i].AddChild(barrier);
-				}
-			}
-			QueueShape(&m_groupBarriers[i]);
-		}
-
-		// Create the player life indicators
-		Point2F playerLifePt = m_playerLivesStart;
-		for (int i = 0; i < m_playerLives - 1; i++) {
-			FLOAT piHeight = m_playerHeight * m_playerIndicatorSize;
-			FLOAT piWidth = m_playerWidth * m_playerIndicatorSize;
-			auto life = new MovingRectangle(playerLifePt, piWidth, piHeight, 0, 0, m_playerColour);
-			auto bullet = new MovingRectangle(Point2F(0, 0), m_bulletWidth * m_playerIndicatorSize, m_bulletHeight * m_playerIndicatorSize, 0, 0, m_bulletColour);
-
-			auto pos = life->GetPos();
-			pos += Point2F((piWidth - m_bulletWidth) / 2.0f, -piHeight / 2.0f);
-			bullet->SetPos(pos);
-
-			playerLifePt.x += piWidth + 10.0F;
-			QueueShape(life);
-			m_playerLifeIndicators.push_back(life);
-			QueueShape(bullet);
-			m_playerLifeIndicators.push_back(bullet);
-		}
+		CreateLifeIndicators();
 
 		QueueShape(&m_player);
 		QueueShape(&m_playerBullet);
@@ -211,7 +142,7 @@ public:
 	}
 
 	void DeInit() {
-		m_gone = NULL;
+		m_hit = NULL;
 		m_ship = NULL;
 	}
 
@@ -257,15 +188,96 @@ public:
 			events.pop();
 		}
 
-		if (m_tdGone.Elapsed(tick)) {
-			m_gone->SetActive(false);
-			m_tdGone.SetActive(false);
+		if (m_tdHit.Elapsed(tick)) {
+			m_hit->SetActive(false);
+			m_tdHit.SetActive(false);
 		}
 
 		return true;
 	}
 
 protected:
+	void CreateInvaders() {
+		m_hit = new MovingBitmap(&m_bitmapHit, Point2F(0, 0), m_invaderWidth, m_invaderHeight, m_invaderSpeed, 90, 0);
+
+		for (FLOAT x = 0; x < m_invaderCols; x++) {
+			for (int y = 0; y < m_invaderRows; y++) {
+				invaderType invType = invaderType::squid;
+				d2dBitmap* p = &m_bitmapSquid[m_frame];
+				if ((y == 1) || (y == 2)) {
+					p = &m_bitmapCrab[m_frame];
+					invType = invaderType::crab;
+				}
+				else if ((y == 3) || (y == 4)) {
+					p = &m_bitmapOctopus[m_frame];
+					invType = invaderType::octopus;
+				}
+
+				MovingBitmap* pInvader = new MovingBitmap(p,
+					Point2F(x * (m_invaderWidth + m_invaderBorder),
+						y * (m_invaderHeight + m_invaderBorder)),
+					m_invaderWidth, m_invaderHeight,
+					0, 0
+				);
+				pInvader->SetUserData((LPARAM)invType);
+				m_groupInvaders.AddChild(pInvader);
+			}
+		}
+		m_hit->SetUserData((LPARAM)invaderType::hit);
+		m_hit->SetActive(false);
+
+		m_groupInvaders.SetPos(Point2F(0.0f, m_scoreY + m_shipY));
+		m_groupInvaders.SetSpeed(m_invaderSpeed);
+		m_groupInvaders.SetDirectionInDeg(90);
+		m_groupInvaders.UpdateBounds();
+
+		QueueShape(&m_groupInvaders);
+	}
+
+	void CreateBarriers() {
+		// Create the barriers as grids of destructable rectangles
+		FLOAT step = (FLOAT)m_screenWidth / (FLOAT)m_barrierCount;
+		for (int i = 0; i < m_barrierCount; i++) {
+			FLOAT divBarrierWidth = m_barrierWidth / m_barrierDividerX;
+			FLOAT divBarrierHeight = m_barrierHeight / m_barrierDividerY;
+			FLOAT startX = step / 2.0f + step * i - m_barrierWidth / 2;
+			FLOAT startY = m_barrierY;
+			m_groupBarriers[i].SetPos(Point2F(startX, startY));
+			for (int x = 0; x < m_barrierDividerX; x++) {
+				for (int y = 0; y < m_barrierDividerY; y++) {
+					auto barrier = new MovingRectangle(
+						Point2F(x * divBarrierWidth, y * divBarrierHeight),
+						divBarrierWidth + 1.0F, divBarrierHeight + 1.0F,
+						0.0F, 0, m_barrierColour);
+
+					m_groupBarriers[i].AddChild(barrier);
+				}
+			}
+			QueueShape(&m_groupBarriers[i]);
+		}
+	}
+
+	void CreateLifeIndicators() {
+		// Create the player life indicators
+		Point2F playerLifePt = m_playerLivesStart;
+		for (int i = 0; i < m_playerLives - 1; i++) {
+			FLOAT piHeight = m_playerHeight * m_playerIndicatorSize;
+			FLOAT piWidth = m_playerWidth * m_playerIndicatorSize;
+			auto life = new MovingRectangle(playerLifePt, piWidth, piHeight, 0, 0, m_playerColour);
+			auto bullet = new MovingRectangle(Point2F(0, 0), m_bulletWidth * m_playerIndicatorSize, m_bulletHeight * m_playerIndicatorSize, 0, 0, m_bulletColour);
+
+			auto pos = life->GetPos();
+			pos += Point2F((piWidth - m_bulletWidth) / 2.0f, -piHeight / 2.0f);
+			bullet->SetPos(pos);
+
+			playerLifePt.x += piWidth + 10.0F;
+			QueueShape(life);
+			m_playerLifeIndicators.push_back(life);
+			QueueShape(bullet);
+			m_playerLifeIndicators.push_back(bullet);
+		}
+	}
+
 	void UpdateCheckPlayerKeys() {
 		// Left/right?
 		if (KeyDown(VK_LEFT)) {
@@ -304,22 +316,21 @@ protected:
 	}
 
 	void UpdateMoveInvaders(ULONGLONG tick) {
-		bool hitEnd = false;
 		if (m_tdInvaderMove.Elapsed(tick)) {
 			// Time for an invader move
 			// Replace the bitmap
 			for (auto* p : m_groupInvaders.GetChildren()) {
 				if (p->GetUserData() == (LPARAM)invaderType::squid) {
-					((MovingBitmap*)p)->SetBitmap(m_frame ? &m_bitmapSquid1 : &m_bitmapSquid2);
+					((MovingBitmap*)p)->SetBitmap(&m_bitmapSquid[m_frame]);
 				}
 				else if (p->GetUserData() == (LPARAM)invaderType::crab) {
-					((MovingBitmap*)p)->SetBitmap(m_frame ? &m_bitmapCrab1 : &m_bitmapCrab2);
+					((MovingBitmap*)p)->SetBitmap(&m_bitmapCrab[m_frame]);
 				}
 				else if (p->GetUserData() == (LPARAM)invaderType::octopus) {
-					((MovingBitmap*)p)->SetBitmap(m_frame ? &m_bitmapOctopus1 : &m_bitmapOctopus2);
+					((MovingBitmap*)p)->SetBitmap(&m_bitmapOctopus[m_frame]);
 				}
 			}
-			m_frame = !m_frame;
+			m_frame = m_frame ? 0 : 1;
 
 			// Check if they move, will any of them hit the end.
 			if (m_groupInvaders.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
@@ -369,9 +380,9 @@ protected:
 				if (invHit) {
 					m_groupInvaders.RemoveChild(invHit);	// Delete the invader
 					delete invHit;
-					m_gone->SetPos(invHit->GetPos(false));
-					m_gone->SetActive(true);
-					m_tdGone.SetActive(true);
+					m_hit->SetPos(invHit->GetPos(false));
+					m_hit->SetActive(true);
+					m_tdHit.SetActive(true);
 					m_playerBullet.SetUserData(0);
 					AddScore(score_invader_hit);
 					m_tdInvaderMove.AddTicks(-20);						// speed up the invaders a little
@@ -507,38 +518,40 @@ protected:
 	MovingRectangle m_player;
 	MovingRectangle m_playerBullet;
 	std::vector<Shape*> m_playerLifeIndicators;
+
 	MovingGroup m_groupInvaders;
 	std::vector<Shape*> m_invaderBullets;
-	MovingBitmap* m_ship;
-	MovingBitmap* m_gone;
-	MovingText m_textScore;
-	MovingText m_textScoreLabel;
+
 	MovingGroup m_groupBarriers[4];
+
+	MovingBitmap* m_ship;
+	MovingBitmap* m_hit;
 
 	TickDelta m_tdInvaderMove;
 	TickDelta m_tdPlayerReset;
 	TickDelta m_tdShip;
 	TickDelta m_tdShipScore;
-	TickDelta m_tdGone;
+	TickDelta m_tdHit;
+
+	MovingText m_textScore;
+	MovingText m_textScoreLabel;
 	MovingText m_textShipScore;
 	MovingText m_textGameOver;
 
-	d2dBitmap m_bitmapOctopus1;
-	d2dBitmap m_bitmapOctopus2;
-	d2dBitmap m_bitmapCrab1;
-	d2dBitmap m_bitmapCrab2;
-	d2dBitmap m_bitmapSquid1;
-	d2dBitmap m_bitmapSquid2;
-	d2dBitmap m_bitmapGone;
+	d2dBitmap m_bitmapOctopus[2];
+	d2dBitmap m_bitmapCrab[2];
+	d2dBitmap m_bitmapSquid[2];
+	int m_frame;	// Invader bitmap frame switcher
+	d2dBitmap m_bitmapHit;
 	d2dBitmap m_bitmapUFO;
 
+	// Changing stuff
 	DWORD m_invadersBulletChance;
 	int m_score;
 	int m_livesRemaining;
 
-	bool m_frame;
-
 	Notifier& m_notifier;
+
 public:
 	AppMessage m_amQuit;
 };

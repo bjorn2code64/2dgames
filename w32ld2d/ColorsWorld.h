@@ -3,12 +3,12 @@
 #include <D2DWorld.h>
 
 #define c_blockSize		50.0f
-#define c_fallingSpeed	5.0f
+#define c_fallingSpeed	2.0f
 
 class ColorsWorld : public D2DWorld
 {
 public:
-	const w32Size c_screenSize = w32Size(800, 1000);	// 16 x 20 blocks
+	const w32Size c_screenSize = w32Size(500, 1000);	// 16 x 20 blocks
 
 	const std::vector<COLORREF> c_colorsAvailable = {
 		RGB(255, 0, 0),
@@ -22,7 +22,7 @@ public:
 
 	class Board {
 	public:
-		static const int boardWidth = 16;
+		static const int boardWidth = 10;
 		static const int boardHeight = 20;
 
 		~Board() {
@@ -76,6 +76,13 @@ public:
 			return false;
 		}
 
+		bool MarkMatches() {
+			std::vector<Shape*> deletedShapes;
+			bool ret = ResolveHoriz(deletedShapes);
+			ret |= ResolveVert(deletedShapes);
+			return ret;
+		}
+
 		Shape* RemoveSquare(int row, int col) {
 			auto it = m_board.find(row);
 			if (it == m_board.end())	return NULL;
@@ -103,19 +110,55 @@ public:
 		}
 
 		void Resolve(std::vector<Shape*>& deleteShapes) {
-			ResolveHoriz(deleteShapes);
-			ResolveVert(deleteShapes);
-		}
-
-		void CheckMatched(std::vector<Shape*>& matched, std::vector<Shape*>& deleteShapes) {
-			if (matched.size() >= 3) {
-				for (auto it = matched.rbegin(); it != matched.rend(); ++it) {
-					deleteShapes.push_back(RemoveSquareAndDrop((int)((*it)->GetPos().y / c_blockSize), (int)((*it)->GetPos().x / c_blockSize)));
-				}
+			bool found = true;
+			while (found) {
+				found = ResolveHoriz(deleteShapes);
+				found |= ResolveVert(deleteShapes);
 			}
 		}
 
-		void ResolveHoriz(std::vector<Shape*>& deleteShapes) {
+		bool MarkedForDeletion() {
+			for (auto x : m_board) {
+				for (auto y : x.second) {
+					if (y.second->GetUserData() == 1) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		void FadeDeleteds(std::vector<Shape*>& deleteShapes) {
+			for (auto x : m_board) {
+				for (auto y : x.second) {
+					if (y.second->GetUserData() == 1) {
+						MovingRectangle* p = (MovingRectangle *)y.second;
+						p->OffsetPos(Point2F(0, 0.5f));
+						p->SetHeight(p->GetHeight() - 1.0f);
+						if (p->GetHeight() < 2.0f) {
+							deleteShapes.push_back(RemoveSquareAndDrop((int)(p->GetPos().y / c_blockSize), (int)(p->GetPos().x / c_blockSize)));
+						}
+					}
+				}
+			}
+
+		}
+
+		bool CheckMatched(std::vector<Shape*>& matched, std::vector<Shape*>& deleteShapes) {
+			if (matched.size() >= 3) {
+				for (auto b : matched) {
+					b->SetUserData(1);	// mark for deletion
+				}
+//				for (auto it = matched.rbegin(); it != matched.rend(); ++it) {
+//					deleteShapes.push_back(RemoveSquareAndDrop((int)((*it)->GetPos().y / c_blockSize), (int)((*it)->GetPos().x / c_blockSize)));
+//				}
+				return true;
+			}
+			return false;
+		}
+
+		bool ResolveHoriz(std::vector<Shape*>& deleteShapes) {
+			bool found = false;
 			for (int row = 0; row < 20; row++) {
 				std::vector<Shape*> matched;
 				for (int col = 0; col < 16; col++) {
@@ -126,7 +169,7 @@ public:
 						for (auto m : matched) {
 							if (m->GetColor() != crThis) {
 								matched.pop_back();	// remove the square that broke the chain
-								CheckMatched(matched, deleteShapes);
+								found |= CheckMatched(matched, deleteShapes);
 								matched.clear();
 								matched.push_back(sq);
 								break;
@@ -134,15 +177,17 @@ public:
 						}
 					}
 					else {
-						CheckMatched(matched, deleteShapes);
+						found |= CheckMatched(matched, deleteShapes);
 						matched.clear();
 					}
 				}
-				CheckMatched(matched, deleteShapes);
+				found |= CheckMatched(matched, deleteShapes);
 			}
+			return found;
 		}
 
-		void ResolveVert(std::vector<Shape*>& deleteShapes) {
+		bool ResolveVert(std::vector<Shape*>& deleteShapes) {
+			bool found = false;
 			for (int col = 0; col < 16; col++) {
 				std::vector<Shape*> matched;
 				for (int row = 0; row < 20; row++) {
@@ -153,7 +198,7 @@ public:
 						for (auto m : matched) {
 							if (m->GetColor() != crThis) {
 								matched.pop_back();	// remove the square that broke the chain
-								CheckMatched(matched, deleteShapes);
+								found |= CheckMatched(matched, deleteShapes);
 								matched.clear();
 								matched.push_back(sq);
 								break;
@@ -161,12 +206,14 @@ public:
 						}
 					}
 					else {
-						CheckMatched(matched, deleteShapes);
+						found |= CheckMatched(matched, deleteShapes);
 						matched.clear();
 					}
 				}
-				CheckMatched(matched, deleteShapes);
+				found |= CheckMatched(matched, deleteShapes);
 			}
+
+			return found;
 		}
 
 	protected:
@@ -194,14 +241,38 @@ public:
 	}
 
 	bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
-		// Check for bottom of screen
-		if (m_fallingGroup.WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
-			Drop();
-		}
+		if (m_board.MarkedForDeletion()) {
+			// Do something deletey animationy
+			std::vector<Shape*> deleteShapes;
+			m_board.FadeDeleteds(deleteShapes);
+			for (auto s : deleteShapes) {
+				RemoveShape(s);
+			}
 
-		// Check if we've hit anything else
-		if (m_board.WillHit(&m_fallingGroup)) {
-			Drop();
+			if (!m_board.MarkedForDeletion()) {
+				Drop();
+			}
+		}
+		else {
+
+			// Check for bottom of screen
+			if (m_fallingGroup.WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
+				m_fallingGroup.SetPos(Point2F(m_fallingGroup.GetPos().x, 850.0f));
+				if (!AddToBoard()) {
+					Drop();	// only drop if no matches were made
+				}
+			}
+
+			// Check if we've hit anything else
+			if (m_board.WillHit(&m_fallingGroup)) {
+				FLOAT y = m_fallingGroup.GetPos().y;	// align the falling group with the grid
+				int yInt = (int)(((y - 1) / 50) + 1) * 50;
+				m_fallingGroup.Offset(Point2F(0, yInt - y));
+
+				if (!AddToBoard()) {
+					Drop();	// only drop if no matches were made
+				}
+			}
 		}
 
 		// Check for quit (Escape)
@@ -236,6 +307,14 @@ public:
 						y += c_blockSize;
 					}
 				}
+				else if (ev.m_wParam == VK_DOWN) {
+					m_fallingGroup.SetSpeed(c_fallingSpeed * 4);
+				}
+			}
+			else if (ev.m_msg == WM_KEYUP) {
+				if (ev.m_wParam == VK_DOWN) {
+					m_fallingGroup.SetSpeed(c_fallingSpeed);
+				}
 			}
 			events.pop();
 		}
@@ -243,12 +322,27 @@ public:
 		return __super::D2DUpdate(tick, ptMouse, events);
 	}
 
-	void Drop() {
+	bool AddToBoard() {
 		// Add the blocks to the board
 		for (auto mr : m_fallingGroup.GetChildren()) {
 			m_board.Set((int)(mr->GetPos().y / c_blockSize), (int)(mr->GetPos().x / c_blockSize), (MovingRectangle*)mr);
+			QueueShape(mr);
 		}
 
+		// Remove them from the group
+		m_fallingGroup.RemoveAllChildren();
+		// Remove the group from the engine
+		RemoveShape(&m_fallingGroup, false);
+
+		if (m_board.MarkMatches()) {
+			m_fallingGroup.SetActive(false);
+			return true;
+		}
+
+		return false;
+
+		// Remove any matches
+/*
 		std::vector<Shape*> deletedShapes;
 		m_board.Resolve(deletedShapes);
 		for (auto s : deletedShapes) {
@@ -261,11 +355,12 @@ public:
 			if (std::find(deletedShapes.begin(), deletedShapes.end(), m) == deletedShapes.end()) {
 				QueueShape(m);
 			}
-		}
-		// Remove them from the group
-		m_fallingGroup.RemoveAllChildren();
-		// Remove the group from the engine
-		RemoveShape(&m_fallingGroup, false);
+		}*/
+
+	}
+
+	void Drop() {
+		m_fallingGroup.SetActive(true);
 
 		// Reset the group
 		m_fallingGroup.SetPos(Point2F(400, 0));

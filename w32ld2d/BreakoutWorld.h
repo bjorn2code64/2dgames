@@ -79,6 +79,7 @@ public:
 					}
 				}*/
 
+		MovingGroup* pCurrentGroup = NULL;
 		File f;
 		f.Open(L"level1.txt", GENERIC_READ, OPEN_EXISTING);
 		std::string s;
@@ -123,13 +124,18 @@ public:
 				}
 
 				if (isBrick) {
+					if (pCurrentGroup == NULL) {
+						pCurrentGroup = new MovingGroup;
+						m_groups.push_back(pCurrentGroup);
+					}
+
 					if (bitmap) {
 						MovingBitmap* pBrick = new MovingBitmap(bitmap, Point2F(x * m_brickWidth, y * m_brickHeight),
 							m_brickWidth, m_brickHeight, 0, 0
 						);
 						m_bricks.push_back(pBrick);
-						QueueShape(pBrick);
 						pBrick->SetUserData(brickType);
+						pCurrentGroup->AddChild(pBrick);
 					}
 					else {
 						MovingRectangle* pBrick = new MovingRectangle(Point2F(x * m_brickWidth, y * m_brickHeight),
@@ -137,15 +143,26 @@ public:
 							brickColor
 						);
 						m_bricks.push_back(pBrick);
-						QueueShape(pBrick);
 						pBrick->SetUserData(brickType);
+						pCurrentGroup->AddChild(pBrick);
 					}
 				}
 
 				x++;
 			}
 
+			if (x == 0) {
+				if (pCurrentGroup) {
+					QueueShape(pCurrentGroup);
+					pCurrentGroup = NULL;
+				}
+			}
+
 			y++;
+		}
+
+		if (pCurrentGroup) {
+			QueueShape(pCurrentGroup);
 		}
 
 /*		for (FLOAT x = 0; x < m_screenWidth; x += m_brickWidth) {
@@ -329,6 +346,9 @@ public:
 		if ((int)pBrickHit->GetUserData() != m_brickNormal) {
 			pBrickHit->SetDirectionInDeg(180);
 			pBrickHit->SetSpeed(2.0F);
+			MovingGroup* pGroup = (MovingGroup *)pBrickHit->GetParent();
+			pGroup->RemoveChild(pBrickHit);
+			QueueShape(pBrickHit);
 		}
 		else {
 			pBrickHit->SetActive(false);
@@ -377,7 +397,35 @@ public:
 		bool hit = false;
 		Shape* pBrickHit = NULL;
 
-		// Has the ball hit a brick
+		for (auto group : m_groups) {
+			std::vector<Shape*> bricksHit;
+			if (group->WillHitShapes(*pBall, bricksHit) > 0) {
+				for (auto pBrick : bricksHit) {
+					if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {	// brick is visible and not falling
+						if (pBall->WillBounceOffRectSides(*pBrick)) {
+							special = (int)pBrick->GetUserData();
+							hit = true;
+							pBrickHit = pBrick;
+							break;
+						}
+					}
+				}
+
+				if (hit) {
+					for (auto pBrick : bricksHit) {
+						if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
+							if (pBall->WillBounceOffRectCorners(*pBrick)) {
+								special = (int)pBrick->GetUserData();
+								pBrickHit = pBrick;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		/*		// Has the ball hit a brick
 		for (auto pBrick : m_bricks) {
 			if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
 				if (pBall->WillBounceOffRectSides(*pBrick)) {
@@ -399,7 +447,7 @@ public:
 					}
 				}
 			}
-		}
+		}*/
 
 		if (pBrickHit)
 			BrickWasHit(pBrickHit);
@@ -503,6 +551,7 @@ protected:
 	MovingRectangle m_bat;
 	FLOAT m_batWidthRequired;
 	std::vector<Shape*> m_bricks;
+	std::vector<MovingGroup*> m_groups;
 	TickDelta m_tdBatLarger;
 	TickDelta m_tdBallFaster;
 	TickDelta m_tdShooterMode;
