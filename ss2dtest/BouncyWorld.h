@@ -25,14 +25,14 @@ public:
 	}
 
 	~BouncyWorld() {
-		DeInit();
+		SS2DDeInit();
 	}
 
-	w32Size D2DGetScreenSize() override {
+	w32Size SS2DGetScreenSize() override {
 		return w32Size(m_screenWidth, m_screenHeight);
 	}
 
-	bool Init() override {
+	bool SS2DInit() override {
 		for (int i = 0; i < m_numShapes; i++) {
 			FLOAT speed = w32randf(5.0f, 15.f);
 			DWORD direction = w32rand(0, 359);
@@ -78,16 +78,16 @@ public:
 		return true;
 	}
 
-	void DeInit() override {
+	void SS2DDeInit() override {
 		m_movingShapes.clear();
 		m_menuitems.clear();
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
+	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
 		// Check all the shapes in the background
 		for (auto shape : m_movingShapes) {
 			// Bounce the shape off the edge
-			switch (shape->WillHitBounds(D2DGetScreenSize())) {
+			switch (shape->WillHitBounds(SS2DGetScreenSize())) {
 			case Shape::moveResult::hitboundsleft:
 				shape->BounceX();
 				break;
@@ -142,7 +142,7 @@ public:
 			events.pop();
 		}
 
-		return __super::D2DUpdate(tick, ptMouse, events);
+		return __super::SS2DUpdate(tick, ptMouse, events);
 	}
 
 protected:

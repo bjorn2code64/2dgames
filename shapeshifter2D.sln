@@ -23,7 +23,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wrap32lib-extras", "wrap32l
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wrap32lib-d2d", "wrap32lib-d2d\wrap32lib-d2d.vcxproj", "{FD1B3167-386D-4F8F-ACCF-1BBFBE107350}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32ld2d", "w32ld2d\wld2d.vcxproj", "{F538390F-DF5D-4495-A248-7AD95B565F30}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ss2dtest", "ss2dtest\ss2dtest.vcxproj", "{F538390F-DF5D-4495-A248-7AD95B565F30}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

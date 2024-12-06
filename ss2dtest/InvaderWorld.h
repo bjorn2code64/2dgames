@@ -23,7 +23,7 @@ protected:
 	const Point2F m_playerStart = Point2F(0, 1000.0f);
 	const FLOAT m_playerSpeed = 10.0f;
 	const FLOAT m_playerbulletSpeed = 20.0f;
-	const int m_playerResetTime = 5000;
+	const int m_playerResetTime = 3000;
 	const COLORREF m_playerColour = RGB(255, 255, 255);
 
 	const int m_playerLives = 3;
@@ -93,11 +93,11 @@ public:
 	~InvaderWorld() {
 	}
 
-	w32Size D2DGetScreenSize() override {
+	w32Size SS2DGetScreenSize() override {
 		return w32Size(m_screenWidth, m_screenHeight);
 	}
 
-	bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
+	bool SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
 		m_bitmapOctopus[0].LoadFromFile(pRenderTarget, pIWICFactory, L"octopusClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmapOctopus[1].LoadFromFile(pRenderTarget, pIWICFactory, L"octopusOpen.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
 		m_bitmapCrab[0].LoadFromFile(pRenderTarget, pIWICFactory, L"crabClosed.png", (UINT)m_invaderWidth, (UINT)m_invaderHeight);
@@ -109,7 +109,7 @@ public:
 		return true;
 	}
 
-	bool Init() {
+	bool SS2DInit() {
 		// Initialise Game Variables
 		m_score = 0;
 		m_livesRemaining = m_playerLives;
@@ -118,7 +118,7 @@ public:
 		m_invadersBulletChance = m_invadersBulletChanceStart;
 
 		// Create Game Objects
-		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90, 0);
+		m_ship = new MovingBitmap(&m_bitmapUFO, Point2F(0, 0), m_shipWidth, m_shipHeight, m_shipSpeed, 90);
 
 		CreateInvaders();
 
@@ -141,12 +141,12 @@ public:
 		return true;
 	}
 
-	void DeInit() {
+	void SS2DDeInit() {
 		m_hit = NULL;
 		m_ship = NULL;
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
+	bool SS2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
 		UpdateCheckPlayerKeys();
 
 		UpdateMoveInvaders(tick);
@@ -198,7 +198,9 @@ public:
 
 protected:
 	void CreateInvaders() {
-		m_hit = new MovingBitmap(&m_bitmapHit, Point2F(0, 0), m_invaderWidth, m_invaderHeight, m_invaderSpeed, 90, 0);
+		m_hit = new MovingBitmap(&m_bitmapHit, Point2F(0, 0), m_invaderWidth, m_invaderHeight, 0, 0);
+		m_hit->SetUserData((LPARAM)invaderType::hit);
+		QueueShape(m_hit, false);
 
 		for (FLOAT x = 0; x < m_invaderCols; x++) {
 			for (int y = 0; y < m_invaderRows; y++) {
@@ -223,8 +225,6 @@ protected:
 				m_groupInvaders.AddChild(pInvader);
 			}
 		}
-		m_hit->SetUserData((LPARAM)invaderType::hit);
-		m_hit->SetActive(false);
 
 		m_groupInvaders.SetPos(Point2F(0.0f, m_scoreY + m_shipY));
 		m_groupInvaders.SetSpeed(m_invaderSpeed);
@@ -333,7 +333,7 @@ protected:
 			m_frame = m_frame ? 0 : 1;
 
 			// Check if they move, will any of them hit the end.
-			if (m_groupInvaders.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
+			if (m_groupInvaders.WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {
 				// Move invaders down and send them back the other way
 				m_groupInvaders.BounceX();
 				m_groupInvaders.OffsetPos(Point2F(0.0f, 60.0f));
@@ -346,7 +346,7 @@ protected:
 
 	void UpdateMovePlayer() {
 		// Move the player
-		if (m_player.WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::ok) {
+		if (m_player.WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::ok) {
 			m_player.Move();
 		}
 		else {
@@ -357,7 +357,7 @@ protected:
 	void UpdateMovePlayerBullet() {
 		// Move the player bullet
 		if (m_playerBullet.IsActive() && m_playerBullet.GetUserData()) {
-			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
+			if (m_playerBullet.WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {
 				m_playerBullet.SetUserData(0);
 			}
 			else {
@@ -378,15 +378,15 @@ protected:
 				// Did we hit an invader?
 				auto invHit = m_groupInvaders.HitTestShape(m_playerBullet);
 				if (invHit) {
+					m_hit->SetPos(invHit->GetPos(true));
 					m_groupInvaders.RemoveChild(invHit);	// Delete the invader
-					delete invHit;
-					m_hit->SetPos(invHit->GetPos(false));
 					m_hit->SetActive(true);
 					m_tdHit.SetActive(true);
 					m_playerBullet.SetUserData(0);
 					AddScore(score_invader_hit);
 					m_tdInvaderMove.AddTicks(-20);						// speed up the invaders a little
 					m_invadersBulletChance -= 1; // increase bullet chance
+					delete invHit;
 				}
 
 				// Did we hit a ship at the top?
@@ -416,7 +416,7 @@ protected:
 		// Move (and destroy) invader bullets
 		for (auto it = m_invaderBullets.begin(); it != m_invaderBullets.end();) {
 			if ((*it)->IsActive()) {
-				if ((*it)->WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
+				if ((*it)->WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {
 					// we're out of bounds
 					RemoveShape(*it);
 					it = m_invaderBullets.erase(it);	// remove the bullet
@@ -488,7 +488,7 @@ protected:
 	void UpdateShip(ULONGLONG tick) {
 		if (m_ship->IsActive()) {
 			// Move the ship along the top
-			if (m_ship->WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::ok) {
+			if (m_ship->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::ok) {
 				m_ship->Move();
 			}
 			else {

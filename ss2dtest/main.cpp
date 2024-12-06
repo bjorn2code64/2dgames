@@ -41,7 +41,7 @@ public:
 	DWORD CreateAndShow(int nCmdShow) {
 		RETURN_IF_ERROR(CreateOverlapped(APPNAME));
 
-		D2DWindow::Init(m_worldActive->D2DGetScreenSize());	// Intialise our d2d engine
+		D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunInvaders);
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunBreakout);
@@ -57,22 +57,22 @@ public:
 	}
 
 protected:
-	bool Init() override {
-		return m_worldActive->Init();
+	bool SS2DInit() override {
+		return m_worldActive->SS2DInit();
 	}
 
-	void DeInit() override {
-		m_worldActive->DeInit();
+	void SS2DDeInit() override {
+		m_worldActive->SS2DDeInit();
 	}
 
 	// Direct2D callbacks from the engine. Pass them to our world.
-	void D2DOnCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override  {
+	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override  {
 		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_pBrush);
-		m_worldActive->D2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
+		m_worldActive->SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
-		return m_worldActive->D2DUpdate(tick, ptMouse, events);
+	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
+		return m_worldActive->SS2DUpdate(tick, ptMouse, events);
 	}
 
 	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
@@ -101,19 +101,19 @@ protected:
 			// Disable the menu world and start Invaders world
 			Stop();
 			m_worldActive = &m_worldInvaders;
-			D2DWindow::Init(m_worldActive->D2DGetScreenSize());	// Intialise our d2d engine
+			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
 		else if (message == m_worldMenu.m_amRunBreakout) {
 			// Disable the menu world and start Breakout world
 			Stop();
 			m_worldActive = &m_worldBreakout;
-			D2DWindow::Init(m_worldActive->D2DGetScreenSize());	// Intialise our d2d engine
+			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
 		else if (message == m_worldMenu.m_amRunColors) {
 			// Disable the menu world and start Colors world
 			Stop();
 			m_worldActive = &m_worldColors;
-			D2DWindow::Init(m_worldActive->D2DGetScreenSize());	// Intialise our d2d engine
+			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
 		else if ((message == m_worldInvaders.m_amQuit) ||
 			(message == m_worldBreakout.m_amQuit) ||
@@ -121,7 +121,7 @@ protected:
 			// Disable the game world and start menu world
 			Stop();
 			m_worldActive = &m_worldMenu;
-			D2DWindow::Init(m_worldActive->D2DGetScreenSize());	// Intialise our d2d engine
+			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
 		else if (message == m_worldMenu.m_amQuit) {
 			Stop();

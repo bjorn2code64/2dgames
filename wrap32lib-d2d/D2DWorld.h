@@ -50,7 +50,7 @@ public:
 	~D2DWorld() {
 	}
 
- 	virtual bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS)
+ 	virtual bool SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS)
 	{
 		return true;
 	}
@@ -65,7 +65,7 @@ public:
 	}
 
 	void InitShape(Shape* p, IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
-		p->D2DOnCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		p->SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
 		for (auto c : p->GetChildren()) {
 			InitShape(c, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
 		}
@@ -110,14 +110,14 @@ public:
 		m_shapesQueue.push_back(std::make_pair(p, active));
 	}
 
-	virtual bool Init() {
+	virtual bool SS2DInit() {
 		return true;
 	}
 
-	virtual void DeInit() {
+	virtual void SS2DDeInit() {
 	}
 
-	virtual bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) {
+	virtual bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) {
 		for (auto p : m_shapes)
 			if (p->IsActive())
 				p->Move();
@@ -132,7 +132,7 @@ public:
 		return true;
 	}
 
-	virtual w32Size D2DGetScreenSize() {
+	virtual w32Size SS2DGetScreenSize() {
 		return w32Size(1920, 1080);
 	}
 

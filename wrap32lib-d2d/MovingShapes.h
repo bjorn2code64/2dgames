@@ -261,7 +261,7 @@ public:
 	{
 	}
 
-	void D2DOnCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) override {
+	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) override {
 		FLOAT fHeight = m_fHeight;
 		pRS->ScaleNoOffset(&fHeight);
 		pDWriteFactory->CreateTextFormat(
@@ -277,7 +277,7 @@ public:
 
 		m_pWTF->SetTextAlignment(m_ta);
 
-		__super::D2DOnCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		__super::SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
 	}
 
 	void D2DDiscardResources() override {

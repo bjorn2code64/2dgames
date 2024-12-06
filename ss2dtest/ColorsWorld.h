@@ -2,13 +2,18 @@
 
 #include <D2DWorld.h>
 
-#define c_blockSize		50.0f
-#define c_fallingSpeed	2.0f
+#define c_screenWidth	600
+#define c_screenHeight	900
+#define c_blockSize		60
+#define c_fallingSpeed	2
+#define c_boardWidth	(c_screenWidth / c_blockSize)
+#define c_boardHeight	(c_screenHeight / c_blockSize)
+#define c_colorsInUse	6
 
 class ColorsWorld : public D2DWorld
 {
 public:
-	const w32Size c_screenSize = w32Size(500, 1000);	// 16 x 20 blocks
+	const w32Size c_screenSize = w32Size(c_screenWidth, c_screenHeight);	// 16 x 20 blocks
 
 	const std::vector<COLORREF> c_colorsAvailable = {
 		RGB(255, 0, 0),
@@ -22,9 +27,6 @@ public:
 
 	class Board {
 	public:
-		static const int boardWidth = 10;
-		static const int boardHeight = 20;
-
 		~Board() {
 			Clear();
 		}
@@ -149,9 +151,6 @@ public:
 				for (auto b : matched) {
 					b->SetUserData(1);	// mark for deletion
 				}
-//				for (auto it = matched.rbegin(); it != matched.rend(); ++it) {
-//					deleteShapes.push_back(RemoveSquareAndDrop((int)((*it)->GetPos().y / c_blockSize), (int)((*it)->GetPos().x / c_blockSize)));
-//				}
 				return true;
 			}
 			return false;
@@ -225,22 +224,22 @@ public:
 		m_fallingGroup(Point2F(400.0f, 0.0f), c_fallingSpeed, 180) {
 	}
 
-	bool Init() override {
+	bool SS2DInit() override {
 		Drop();
 		return true;
 	}
 
-	void DeInit() {
+	void SS2DDeInit() {
 		RemoveShape(&m_fallingGroup, false);
 		m_fallingGroup.RemoveAllChildren(true);
 		m_board.Clear();
 	}
 
-	w32Size D2DGetScreenSize() override {
+	w32Size SS2DGetScreenSize() override {
 		return c_screenSize;
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
+	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
 		if (m_board.MarkedForDeletion()) {
 			// Do something deletey animationy
 			std::vector<Shape*> deleteShapes;
@@ -250,14 +249,17 @@ public:
 			}
 
 			if (!m_board.MarkedForDeletion()) {
-				Drop();
+				// Check for more matches first
+				if (!m_board.MarkMatches()) {
+					Drop();
+				}
 			}
 		}
 		else {
 
 			// Check for bottom of screen
-			if (m_fallingGroup.WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
-				m_fallingGroup.SetPos(Point2F(m_fallingGroup.GetPos().x, 850.0f));
+			if (m_fallingGroup.WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
+				m_fallingGroup.SetPos(Point2F(m_fallingGroup.GetPos().x, c_screenHeight - 3 * c_blockSize));
 				if (!AddToBoard()) {
 					Drop();	// only drop if no matches were made
 				}
@@ -266,7 +268,7 @@ public:
 			// Check if we've hit anything else
 			if (m_board.WillHit(&m_fallingGroup)) {
 				FLOAT y = m_fallingGroup.GetPos().y;	// align the falling group with the grid
-				int yInt = (int)(((y - 1) / 50) + 1) * 50;
+				int yInt = (int)(((y - 1) / c_blockSize) + 1) * c_blockSize;
 				m_fallingGroup.Offset(Point2F(0, yInt - y));
 
 				if (!AddToBoard()) {
@@ -319,7 +321,7 @@ public:
 			events.pop();
 		}
 
-		return __super::D2DUpdate(tick, ptMouse, events);
+		return __super::SS2DUpdate(tick, ptMouse, events);
 	}
 
 	bool AddToBoard() {
@@ -340,38 +342,21 @@ public:
 		}
 
 		return false;
-
-		// Remove any matches
-/*
-		std::vector<Shape*> deletedShapes;
-		m_board.Resolve(deletedShapes);
-		for (auto s : deletedShapes) {
-			RemoveShape(s);
-		}
-
-		// Add the blocks to the engine as they won't be in the group anymore.
-		for (auto m : m_fallingGroup.GetChildren()) {
-			// Only queue to the engine the shapes that weren't removed during Resolve()
-			if (std::find(deletedShapes.begin(), deletedShapes.end(), m) == deletedShapes.end()) {
-				QueueShape(m);
-			}
-		}*/
-
 	}
 
 	void Drop() {
 		m_fallingGroup.SetActive(true);
 
 		// Reset the group
-		m_fallingGroup.SetPos(Point2F(400, 0));
+		m_fallingGroup.SetPos(Point2F((c_screenWidth / 2 ) - c_blockSize, 0));
 		m_fallingGroup.AddChild(
-			new MovingRectangle(Point2F(0, 0), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsAvailable.size() - 1)])
+			new MovingRectangle(Point2F(0, 0), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 		m_fallingGroup.AddChild(
-			new MovingRectangle(Point2F(0, 50), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsAvailable.size() - 1)])
+			new MovingRectangle(Point2F(0, c_blockSize), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 		m_fallingGroup.AddChild(
-			new MovingRectangle(Point2F(0, 100), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsAvailable.size() - 1)])
+			new MovingRectangle(Point2F(0, c_blockSize * 2), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 
 		// Add it back to the engine

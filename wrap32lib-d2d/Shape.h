@@ -211,10 +211,11 @@ public:
 			m_parent->ChildHasMoved();
 		}
 	}
+
 	bool IsActive() { return m_active; }
 
 	// Resources and drawing
-	virtual void D2DOnCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* m_pIWICFactory, const D2DRectScaler* pRS) {
+	virtual void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* m_pIWICFactory, const D2DRectScaler* pRS) {
 		UINT32 rgb =
 			(m_rgb & 0x000000ff) << 16 |
 			(m_rgb & 0x0000ff00) |

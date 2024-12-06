@@ -140,7 +140,7 @@ protected:
 			// Set rsFAR up first as it may be used in Creation of resources
 			m_rsFAR.SetBounds(m_pRenderTarget->GetSize());
 
-			D2DOnCreateResources(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
+			SS2DCreateResources(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
 		}
 
 		return hr;
@@ -181,7 +181,7 @@ protected:
 	bool OnUpdateTimer() {
 		ULONGLONG updateStart = GetTickCount64();
 
-		if (!D2DUpdate(updateStart, m_ptMouse, m_events)) return true;
+		if (!SS2DUpdate(updateStart, m_ptMouse, m_events)) return true;
 		m_events = std::queue<WindowEvent>();
 
 		if (EnsureDeviceResourcesCreated() != S_OK)	return true;
@@ -211,10 +211,10 @@ protected:
 		SafeRelease(&m_pRenderTarget);
 	}
 
-	virtual bool Init() { return true; }
-	virtual void DeInit() {}
+	virtual bool SS2DInit() { return true; }
+	virtual void SS2DDeInit() {}
 
-	virtual bool D2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) { return false;  }	// manipulate your data here - return true to quit
+	virtual bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) { return false;  }	// manipulate your data here - return true to quit
 
 	virtual void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {}	// draw the data here
 	virtual void D2DRender(ID2D1HwndRenderTarget* pRenderTarget) {}	// draw the data here
@@ -231,7 +231,7 @@ protected:
 			return;
 		}
 
-		if (!Init()) {
+		if (!SS2DInit()) {
 			return;
 		}
 
@@ -247,7 +247,7 @@ protected:
 	}
 
 	void ThreadShutdown() override {
-		DeInit();
+		SS2DDeInit();
 		D2DDiscard();
 		SafeRelease(&m_pIWICFactory);
 		SafeRelease(&m_pDWriteFactory);
@@ -267,7 +267,7 @@ protected:
 	void D2DClearScreen(D2D1::ColorF c)	{	m_pRenderTarget->Clear(c);	}
 	void D2DGetFARRect(RectF* p)		{	m_rsFAR.GetUserRect(p);		}
 
-	virtual void D2DOnCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget,
+	virtual void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget,
 		IWICImagingFactory* pIWICFactory) {}
 	virtual void D2DOnDiscardResources() {}
 

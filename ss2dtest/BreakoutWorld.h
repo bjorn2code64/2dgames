@@ -192,14 +192,14 @@ public:
 		}*/
 	}
 
-	bool D2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
+	bool SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
 		m_bitmapMultiball.LoadFromFile(pRenderTarget, pIWICFactory, L"multiball.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
 		m_bitmapShooter.LoadFromFile(pRenderTarget, pIWICFactory, L"shooter.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
 		m_bitmapBatLarger.LoadFromFile(pRenderTarget, pIWICFactory, L"batlarger.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
 		return true;
 	}
 
-	bool Init() {
+	bool SS2DInit() {
 		m_batWidthRequired = m_batStartWidth;
 		m_ballSpeed = m_ballStartSpeed;
 		m_score = 0;
@@ -224,12 +224,12 @@ public:
 		return true;
 	}
 
-	void DeInit() {
+	void SS2DDeInit() {
 		m_balls.clear();
 		m_bricks.clear();
 	}
 
-	bool D2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
+	bool SS2DUpdate(ULONGLONG tick, const Point2F& mouse, std::queue<WindowEvent>& events) override {
 		m_colorBackground = D2D1::ColorF::Black;
 
 		// Larger bat timeout elapsed?
@@ -287,7 +287,7 @@ public:
 			m_playerBullet.SetPos(Point2F(LimitF(bulletX, 0.0f, m_screenWidth - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
 		}
 		else {
-			if (m_playerBullet.WillHitBounds(D2DGetScreenSize()) != Shape::moveResult::ok) {
+			if (m_playerBullet.WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {
 				ResetBullet();
 			}
 		}
@@ -333,12 +333,12 @@ public:
 		// Move any falling bricks
 		for (auto pBrick : m_bricks) {
 			// Has this brick gone past the player's bat?
-			if (pBrick->WillHitBounds(D2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
+			if (pBrick->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
 				pBrick->SetActive(false);
 			}
 		}
 
-		return __super::D2DUpdate(tick, mouse, events);
+		return __super::SS2DUpdate(tick, mouse, events);
 	}
 
 	void BrickWasHit(Shape* pBrickHit) {
@@ -362,7 +362,7 @@ public:
 			return false;
 
 		// Will the ball hit an edge?
-		switch (pBall->WillHitBounds(D2DGetScreenSize())) {
+		switch (pBall->WillHitBounds(SS2DGetScreenSize())) {
 		case Shape::moveResult::hitboundsright:
 		case Shape::moveResult::hitboundsleft:
 			pBall->BounceX();
