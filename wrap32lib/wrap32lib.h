@@ -16,8 +16,8 @@
 #pragma warning( disable : 4100) 
 
 extern void w32seed();
-extern DWORD w32rand(DWORD lo, DWORD hi);
-extern DWORD w32rand(DWORD hi);
+extern int w32rand(int lo, int hi);
+extern int w32rand(int hi);
 float w32randf(float lo, float hi);
 float w32randf(float hi);
 

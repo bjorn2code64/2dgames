@@ -79,18 +79,18 @@ public:
 		hitboundsbottom
 	};
 
-	Shape(const Point2F& pos, float speed, int direction, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_pos(pos), m_fSpeed(speed), m_parent(NULL), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(true),
+	Shape(FLOAT x, FLOAT y, FLOAT speed, int direction, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		m_pos(x, y), m_fSpeed(speed), m_parent(NULL), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(true),
 		m_childHasMoved(true)
 	{
 		SetDirectionInDeg(direction);
 	}
 
 	~Shape() {
-		D2DDiscardResources();
-		if (m_parent) {
-			m_parent->RemoveChild(this);
-		}
+		SS2DDiscardResources();
+//		if (m_parent) {
+//			m_parent->RemoveChild(this);
+//		}
 	}
 
 	Point2F GetPos(bool includeParent = true) const {
@@ -224,7 +224,7 @@ public:
 		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(rgb, m_alpha), &m_pBrush);
 	}
 
-	virtual void D2DDiscardResources() {
+	virtual void SS2DDiscardResources() {
 		SafeRelease(&m_pBrush);
 	}
 
@@ -281,12 +281,12 @@ public:
 		GetBoundingBox(&rThis, GetPos());
 		return rThis.hitTest(rect);
 	}
-	bool HitTestShape(const Shape& rhs) {
+	bool HitTestShape(Shape* rhs) {
 		RectF rThis;
 		GetBoundingBox(&rThis, GetPos());
 
 		RectF rThat;
-		rhs.GetBoundingBox(&rThat, rhs.GetPos());
+		rhs->GetBoundingBox(&rThat, rhs->GetPos());
 		return rThis.hitTest(rThat);
 	}
 
@@ -296,9 +296,12 @@ public:
 
 	void InsertChild(Shape* p) { m_children.insert(m_children.begin(), p); p->SetParent(this); }	// at the beginning
 	void AddChild(Shape* p) { m_children.push_back(p); p->SetParent(this); }						// at the end
-	void RemoveChild(Shape* p) {
+	void RemoveChild(Shape* p, bool del = false) {
 		auto it = std::find(m_children.begin(), m_children.end(), p);
 		if (it != m_children.end()) {
+			if (del) {
+				delete* it;
+			}
 			m_children.erase(it);
 		}
 		ChildHasMoved();

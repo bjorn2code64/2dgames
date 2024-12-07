@@ -208,10 +208,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BouncyWorld.h" />
+    <ClInclude Include="MenuWorld.h" />
     <ClInclude Include="BreakoutWorld.h" />
     <ClInclude Include="ColorsWorld.h" />
     <ClInclude Include="InvaderWorld.h" />
+    <ClInclude Include="RoadWorld.h" />
+    <ClInclude Include="StarterWorld.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\runtime\batlarger.png" />

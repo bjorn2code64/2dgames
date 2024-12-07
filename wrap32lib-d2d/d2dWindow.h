@@ -247,11 +247,13 @@ protected:
 	}
 
 	void ThreadShutdown() override {
-		SS2DDeInit();
+		// Clear the d2d stuff first
 		D2DDiscard();
 		SafeRelease(&m_pIWICFactory);
 		SafeRelease(&m_pDWriteFactory);
 		SafeRelease(&m_pDirect2dFactory);
+		// Deallocate Objects
+		SS2DDeInit();
 		CoUninitialize();
 	}
 

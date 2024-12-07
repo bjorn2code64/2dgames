@@ -33,7 +33,7 @@
     <ClInclude Include="d2dWindow.h" />
     <ClInclude Include="d2dbitmap.h" />
     <ClInclude Include="d2dtypes.h" />
-    <ClInclude Include="D2DWorld.h" />
+    <ClInclude Include="SS2DWorld.h" />
     <ClInclude Include="d2dwrite.h" />
     <ClInclude Include="MovingShapes.h" />
     <ClInclude Include="Shape.h" />

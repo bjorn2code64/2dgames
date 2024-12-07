@@ -6,10 +6,12 @@
 #include <WindowSaverExt.h>
 #include <Notifier.h>
 
-#include "BouncyWorld.h"
+#include "MenuWorld.h"
 #include "InvaderWorld.h"
 #include "BreakoutWorld.h"
 #include "ColorsWorld.h"
+#include "RoadWorld.h"
+#include "StarterWorld.h"
 
 #define APPNAME L"w32ld2d"
 
@@ -26,7 +28,9 @@ public:
 		m_worldMenu(m_notifier),
 		m_worldInvaders(m_notifier),
 		m_worldBreakout(m_notifier),
-		m_worldColors(m_notifier)
+		m_worldColors(m_notifier),
+		m_worldRoad(m_notifier),
+		m_worldStarter(m_notifier)
 	{
 		srand((unsigned int)time(NULL));	// Stop random numbers being the same every time
 		w32seed();
@@ -46,11 +50,15 @@ public:
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunInvaders);
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunBreakout);
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunColors);
+		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunRoad);
+		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunStarter);
 
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldInvaders.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldBreakout.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldColors.m_amQuit);
+		m_notifier.AddNotifyTarget(this, m_worldRoad.m_amQuit);
+		m_notifier.AddNotifyTarget(this, m_worldStarter.m_amQuit);
 
 		Show(nCmdShow);
 		return ERROR_SUCCESS;
@@ -62,13 +70,12 @@ protected:
 	}
 
 	void SS2DDeInit() override {
-		m_worldActive->SS2DDeInit();
+		m_worldActive->DeInit();
 	}
 
 	// Direct2D callbacks from the engine. Pass them to our world.
 	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override  {
 		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_pBrush);
-		m_worldActive->SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
 	}
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
@@ -91,7 +98,7 @@ protected:
 	}
 
 	void D2DOnDiscardResources() override {
-		m_worldActive->D2DDiscardResources();
+		m_worldActive->SS2DDiscardResources();
 
 		SafeRelease(&m_pBrush);
 	}
@@ -115,9 +122,24 @@ protected:
 			m_worldActive = &m_worldColors;
 			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
+		else if (message == m_worldMenu.m_amRunRoad) {
+			// Disable the menu world and start Road world
+			Stop();
+			m_worldActive = &m_worldRoad;
+			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
+		}
+		else if (message == m_worldMenu.m_amRunStarter) {
+			// Disable the menu world and start Road world
+			Stop();
+			m_worldActive = &m_worldStarter;
+			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
+		}
 		else if ((message == m_worldInvaders.m_amQuit) ||
 			(message == m_worldBreakout.m_amQuit) ||
-			(message == m_worldColors.m_amQuit)) {
+			(message == m_worldColors.m_amQuit) ||
+			(message == m_worldRoad.m_amQuit) ||
+			(message == m_worldStarter.m_amQuit)
+			) {
 			// Disable the game world and start menu world
 			Stop();
 			m_worldActive = &m_worldMenu;
@@ -132,14 +154,15 @@ protected:
 	}
 
 protected:
-// Instance just one of the following worlds
 
-	BouncyWorld m_worldMenu;
+	MenuWorld m_worldMenu;
 	InvaderWorld m_worldInvaders;
 	BreakoutWorld m_worldBreakout;
 	ColorsWorld m_worldColors;
+	RoadWorld m_worldRoad;
+	StarterWorld m_worldStarter;
 
-	D2DWorld* m_worldActive;
+	SS2DWorld* m_worldActive;
 
 	ID2D1SolidColorBrush* m_pBrush;	// Fixed aspect outline brush - white
 

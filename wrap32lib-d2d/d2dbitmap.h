@@ -9,12 +9,12 @@
 
 #pragma comment(lib, "windowscodecs")
 
-class d2dBitmap {
+class SS2DBitmap {
 public:
-	d2dBitmap() : m_pBitmap(NULL) {
+	SS2DBitmap(LPCWSTR filePath) : m_pBitmap(NULL), m_filePath(filePath) {
 	}
 
-	~d2dBitmap() {
+	~SS2DBitmap() {
 		Clear();
 	}
 
@@ -32,11 +32,12 @@ public:
 		return w32Size(0, 0);
 	}
 
-	void Render(ID2D1RenderTarget* pRenderTarget, const D2D1_RECT_F& rectBounds) const {
+	void Render(ID2D1RenderTarget* pRenderTarget, const D2D1_RECT_F& rectBounds, FLOAT opacity) const {
 		if (m_pBitmap) {
 			pRenderTarget->DrawBitmap(
 				m_pBitmap,
-				rectBounds
+				rectBounds,
+				opacity
 			);
 		}
 	}
@@ -44,9 +45,8 @@ public:
 	HRESULT LoadFromFile (
 		ID2D1RenderTarget* pRenderTarget,
 		IWICImagingFactory* pIWICFactory,
-		PCWSTR uri,
-		UINT destinationWidth,
-		UINT destinationHeight
+		UINT destinationWidth = 0,
+		UINT destinationHeight = 0
 	)
 	{
 		HRESULT hr = S_OK;
@@ -58,7 +58,7 @@ public:
 		IWICBitmapScaler* pScaler = NULL;
 
 		hr = pIWICFactory->CreateDecoderFromFilename(
-			uri,
+			m_filePath.c_str(),
 			NULL,
 			GENERIC_READ,
 			WICDecodeMetadataCacheOnLoad,
@@ -137,5 +137,6 @@ public:
 	}
 
 protected:
+	std::wstring m_filePath;
 	ID2D1Bitmap* m_pBitmap;
 };

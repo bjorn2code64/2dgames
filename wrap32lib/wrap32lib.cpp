@@ -8,13 +8,13 @@ void w32seed() {
 	l_generator.seed(GetTickCount());
 }
 
-DWORD w32rand(DWORD lo, DWORD hi) {
+int w32rand(int lo, int hi) {
 	std::uniform_int_distribution<int> distribution(lo, hi);
 	return distribution(l_generator);
 }
 
-DWORD w32rand(DWORD hi) {
-	return w32rand(0, hi);
+int w32rand(int hi) {
+	return w32rand(0, (int)hi);
 }
 
 float w32randf(float lo, float hi) {

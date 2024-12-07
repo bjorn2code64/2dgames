@@ -1,6 +1,6 @@
 #pragma once
 
-#include <D2DWorld.h>
+#include <SS2DWorld.h>
 
 #define c_screenWidth	600
 #define c_screenHeight	900
@@ -10,7 +10,7 @@
 #define c_boardHeight	(c_screenHeight / c_blockSize)
 #define c_colorsInUse	6
 
-class ColorsWorld : public D2DWorld
+class ColorsWorld : public SS2DWorld
 {
 public:
 	const w32Size c_screenSize = w32Size(c_screenWidth, c_screenHeight);	// 16 x 20 blocks
@@ -221,7 +221,7 @@ public:
 
 	ColorsWorld(Notifier& notifier) : 
 		m_notifier(notifier), 
-		m_fallingGroup(Point2F(400.0f, 0.0f), c_fallingSpeed, 180) {
+		m_fallingGroup(400.0f, 0.0f, c_fallingSpeed, 180) {
 	}
 
 	bool SS2DInit() override {
@@ -230,7 +230,7 @@ public:
 	}
 
 	void SS2DDeInit() {
-		RemoveShape(&m_fallingGroup, false);
+		RemoveShape(&m_fallingGroup);
 		m_fallingGroup.RemoveAllChildren(true);
 		m_board.Clear();
 	}
@@ -245,7 +245,7 @@ public:
 			std::vector<Shape*> deleteShapes;
 			m_board.FadeDeleteds(deleteShapes);
 			for (auto s : deleteShapes) {
-				RemoveShape(s);
+				RemoveShape(s, true);
 			}
 
 			if (!m_board.MarkedForDeletion()) {
@@ -334,7 +334,7 @@ public:
 		// Remove them from the group
 		m_fallingGroup.RemoveAllChildren();
 		// Remove the group from the engine
-		RemoveShape(&m_fallingGroup, false);
+		RemoveShape(&m_fallingGroup);
 
 		if (m_board.MarkMatches()) {
 			m_fallingGroup.SetActive(false);
@@ -350,13 +350,13 @@ public:
 		// Reset the group
 		m_fallingGroup.SetPos(Point2F((c_screenWidth / 2 ) - c_blockSize, 0));
 		m_fallingGroup.AddChild(
-			new MovingRectangle(Point2F(0, 0), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
+			new MovingRectangle(0, 0, c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 		m_fallingGroup.AddChild(
-			new MovingRectangle(Point2F(0, c_blockSize), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
+			new MovingRectangle(0, c_blockSize, c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 		m_fallingGroup.AddChild(
-			new MovingRectangle(Point2F(0, c_blockSize * 2), c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
+			new MovingRectangle(0, c_blockSize * 2, c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 
 		// Add it back to the engine

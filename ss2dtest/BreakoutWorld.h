@@ -2,13 +2,13 @@
 
 #include <list>
 
-#include <D2DWorld.h>
+#include <SS2DWorld.h>
 
 FLOAT LimitF(FLOAT x, FLOAT min, FLOAT max) {
 	return (x < min) ? min : (x > max ? max : x);
 }
 
-class BreakoutWorld : public D2DWorld
+class BreakoutWorld : public SS2DWorld
 {
 protected:
 	const int m_screenWidth = 1920;
@@ -46,14 +46,14 @@ protected:
 public:
 	BreakoutWorld(Notifier& notifier) :
 		m_notifier(notifier),
-		m_bat(Point2F(0, 0), m_batStartWidth, m_batHeight, 0, 0, RGB(255, 255, 255)),
+		m_bat(0, 0, m_batStartWidth, m_batHeight, 0, 0, RGB(255, 255, 255)),
 		m_tdBatLarger(batLargerTime, false),
 		m_tdBallFaster(ballFasterTime, false),
 		m_tdShooterMode(ballShooterTime, false),
-		m_playerBullet(Point2F(0, 0), m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
-		m_countdownShooter(Point2F(400, 1030), 100.0F, 20.0f, 0.0f, 0, RGB(255, 0, 0)),
-		m_textScoreLabel(L"Score:", Point2F(10, 1030), 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, RGB(255, 255, 255)),
-		m_textScore(L"0", Point2F(50, 1030), 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, RGB(255, 255, 255))
+		m_playerBullet(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
+		m_countdownShooter(400, 1030, 100.0F, 20.0f, 0.0f, 0, RGB(255, 0, 0)),
+		m_textScoreLabel(L"Score:", 10, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, RGB(255, 255, 255)),
+		m_textScore(L"0", 50, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, RGB(255, 255, 255))
 	{
 	}
 	~BreakoutWorld() {}
@@ -95,7 +95,7 @@ public:
 				COLORREF brickColor = RGB(0, 0, 0);
 				int brickType = m_brickNormal;
 				bool isBrick = true;
-				d2dBitmap* bitmap = NULL;
+				SS2DBitmap* bitmap = NULL;
 
 				switch (s.at(i)) {
 					case '0':
@@ -104,7 +104,7 @@ public:
 						break;
 					case '1':
 						brickType = m_brickBatLarger;
-						bitmap = &m_bitmapBatLarger;
+						bitmap = m_bitmapBatLarger;
 						break;
 					case '2':
 						brickType = m_brickBallSlower;
@@ -112,11 +112,11 @@ public:
 						break;
 					case '3':
 						brickType = m_brickMultiball;
-						bitmap = &m_bitmapMultiball;
+						bitmap = m_bitmapMultiball;
 						break;
 					case '4':
 						brickType = m_brickShooter;
-						bitmap = &m_bitmapShooter;
+						bitmap = m_bitmapShooter;
 						break;
 					default:
 						isBrick = false;
@@ -130,7 +130,7 @@ public:
 					}
 
 					if (bitmap) {
-						MovingBitmap* pBrick = new MovingBitmap(bitmap, Point2F(x * m_brickWidth, y * m_brickHeight),
+						MovingBitmap* pBrick = new MovingBitmap(bitmap, x * m_brickWidth, y * m_brickHeight,
 							m_brickWidth, m_brickHeight, 0, 0
 						);
 						m_bricks.push_back(pBrick);
@@ -138,7 +138,7 @@ public:
 						pCurrentGroup->AddChild(pBrick);
 					}
 					else {
-						MovingRectangle* pBrick = new MovingRectangle(Point2F(x * m_brickWidth, y * m_brickHeight),
+						MovingRectangle* pBrick = new MovingRectangle(x * m_brickWidth, y * m_brickHeight,
 							m_brickWidth, m_brickHeight, 0, 0,
 							brickColor
 						);
@@ -192,20 +192,17 @@ public:
 		}*/
 	}
 
-	bool SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) override {
-		m_bitmapMultiball.LoadFromFile(pRenderTarget, pIWICFactory, L"multiball.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
-		m_bitmapShooter.LoadFromFile(pRenderTarget, pIWICFactory, L"shooter.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
-		m_bitmapBatLarger.LoadFromFile(pRenderTarget, pIWICFactory, L"batlarger.png", (UINT)m_brickWidth, (UINT)m_brickHeight);
-		return true;
-	}
-
 	bool SS2DInit() {
+		m_bitmapMultiball = NewResourceBitmap(L"multiball.png");
+		m_bitmapShooter = NewResourceBitmap(L"shooter.png");
+		m_bitmapBatLarger = NewResourceBitmap(L"batlarger.png");
+
 		m_batWidthRequired = m_batStartWidth;
 		m_ballSpeed = m_ballStartSpeed;
 		m_score = 0;
 		m_textScore.SetText(std::to_wstring(m_score).c_str());
 
-		m_balls.push_back(new MovingCircle(Point2F(200.0f, 600.0f), m_ballRadius, m_ballStartSpeed, 135, RGB(255, 255, 255)));
+		m_balls.push_back(new MovingCircle(200.0f, 600.0f, m_ballRadius, m_ballStartSpeed, 135, RGB(255, 255, 255)));
 
 		GenerateBricks();
 
@@ -298,7 +295,7 @@ public:
 			auto pBall = *it;
 			if (CheckBallHitScreenEdges(pBall)) {	// true means it's off the bottom
 				it = m_balls.erase(it);
-				RemoveShape(pBall);
+				RemoveShape(pBall, true);
 			}
 			else {
 				++it;
@@ -455,7 +452,7 @@ public:
 
 	void CheckBatHitBrick() {
 		for (auto pBrick : m_bricks) {
-			if (pBrick->IsActive() && m_bat.HitTestShape(*pBrick)) {
+			if (pBrick->IsActive() && m_bat.HitTestShape(pBrick)) {
 				// The bat hit a (falling) brick. Activate the effect.
 				int special = (int)pBrick->GetUserData();
 				if (special == m_brickBatLarger) {
@@ -483,9 +480,9 @@ public:
 						int direction = pBall->GetDirectionInDeg();
 
 						// Add two more balls at this position
-						MovingCircle* pBallNew = new MovingCircle(pos, m_ballRadius, m_ballStartSpeed, direction + 2, RGB(255, 255, 255));
+						MovingCircle* pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction + 2, RGB(255, 255, 255));
 						newBalls.push_back(pBallNew);
-						pBallNew = new MovingCircle(pos, m_ballRadius, m_ballStartSpeed, direction - 2, RGB(255, 255, 255));
+						pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction - 2, RGB(255, 255, 255));
 						newBalls.push_back(pBallNew);
 					}
 
@@ -520,7 +517,7 @@ public:
 
 		for (auto pBrick : m_bricks) {
 			if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
-				if (m_playerBullet.HitTestShape(*pBrick)) {
+				if (m_playerBullet.HitTestShape(pBrick)) {
 					BrickWasHit(pBrick);
 					ResetBullet();
 				}
@@ -557,9 +554,9 @@ protected:
 	TickDelta m_tdShooterMode;
 	FLOAT m_ballSpeed;
 	MovingRectangle m_countdownShooter;
-	d2dBitmap m_bitmapMultiball;
-	d2dBitmap m_bitmapShooter;
-	d2dBitmap m_bitmapBatLarger;
+	SS2DBitmap* m_bitmapMultiball;
+	SS2DBitmap* m_bitmapShooter;
+	SS2DBitmap* m_bitmapBatLarger;
 	MovingText m_textScoreLabel;
 	MovingText m_textScore;
 	int m_score;

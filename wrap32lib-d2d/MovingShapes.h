@@ -5,7 +5,8 @@
 class MovingCircle : public Shape
 {
 public:
-	MovingCircle(const Point2F& pos, float radius, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) : Shape(pos, speed, dir, rgb, alpha, userdata), m_fRadius(radius) {}
+	MovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		Shape(x, y, speed, dir, rgb, alpha, userdata), m_fRadius(radius) {}
 
 	bool HitTest(Point2F pos) override {
 		float distSq = (pos.x - m_pos.x) * (pos.x - m_pos.x) +
@@ -154,8 +155,8 @@ protected:
 class MovingRectangle : public Shape
 {
 public:
-	MovingRectangle(const Point2F& pos, float width, float height, float speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		Shape(pos, speed, dir, rgb, alpha, userdata), m_fWidth(width), m_fHeight(height)
+	MovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		Shape(x, y, speed, dir, rgb, alpha, userdata), m_fWidth(width), m_fHeight(height)
 	{
 	}
 
@@ -207,11 +208,11 @@ protected:
 class MovingBitmap : public Shape
 {
 public:
-	MovingBitmap(d2dBitmap* bitmap, const Point2F& pos, float width, float height, float speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_bitmap(bitmap), Shape(pos, speed, dir, RGB(255, 0, 255), alpha, userdata), m_fWidth(width), m_fHeight(height) {
+	MovingBitmap(SS2DBitmap* bitmap, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		m_bitmap(bitmap), Shape(x, y, speed, dir, 0, alpha, userdata), m_fWidth(width), m_fHeight(height) {
 	}
 
-	void SetBitmap(d2dBitmap* bitmap) {
+	void SetBitmap(SS2DBitmap* bitmap) {
 		m_bitmap = bitmap;
 	}
 
@@ -230,7 +231,7 @@ public:
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		m_bitmap->Render(pRenderTarget, r);
+		m_bitmap->Render(pRenderTarget, r, m_alpha);
 		if (dwFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS) {
 			pRenderTarget->DrawRectangle(&r, GetBrush());
 		}
@@ -247,14 +248,14 @@ public:
 protected:
 	FLOAT m_fWidth;
 	FLOAT m_fHeight;
-	d2dBitmap* m_bitmap;
+	SS2DBitmap* m_bitmap;
 };
 
 class MovingText : public Shape {
 public:
-	MovingText(LPCWSTR wsz, const Point2F& pos, float width, float height, float speed, int dir, DWRITE_TEXT_ALIGNMENT ta, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+	MovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
 		m_text(wsz),
-		Shape(pos, speed, dir, rgb, alpha, userdata),
+		Shape(x, y, speed, dir, rgb, alpha, userdata),
 		m_fWidth(width), m_fHeight(height),
 		m_pWTF(NULL),
 		m_ta(ta)
@@ -280,9 +281,9 @@ public:
 		__super::SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
 	}
 
-	void D2DDiscardResources() override {
+	void SS2DDiscardResources() override {
 		SafeRelease(&m_pWTF);
-		__super::D2DDiscardResources();
+		__super::SS2DDiscardResources();
 	}
 
 	void SetText(LPCWSTR wsz) {
@@ -327,13 +328,37 @@ class MovingGroup : public MovingRectangle {
 public:
 	// Set width/height to !0 to debug where the shape is
 	MovingGroup() :
-		MovingRectangle(Point2F(0.0f, 0.0f), 0.0f, 0.0f, 0.0f, 0, RGB(255, 0, 255), 1.0F, 0)
+		MovingRectangle(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0, RGB(255, 0, 255), 1.0F, 0)
 	{
 	}
 
-	MovingGroup(const Point2F& pos, float speed, int dir, LPARAM userdata = 0) :
-		MovingRectangle(pos, 0.0f, 0.0f, speed, dir, RGB(255, 0, 255), 1.0F, userdata)
+	MovingGroup(FLOAT x, FLOAT y, FLOAT speed, int dir, LPARAM userdata = 0) :
+		MovingRectangle(x, y, 0.0f, 0.0f, speed, dir, RGB(255, 0, 255), 1.0F, userdata)
 	{
+	}
+
+	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, rgb, alpha, userdata);
+		AddChild(p);
+		return p;
+	}
+
+	MovingBitmap* NewMovingBitmap(SS2DBitmap* bmp, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingBitmap* p = new MovingBitmap(bmp, x, y, width, height, speed, dir, alpha, userdata);
+		AddChild(p);
+		return p;
+	}
+
+	virtual void SS2DDiscardResources() {
+		for (auto c : m_children) {
+			c->SS2DDiscardResources();
+		}
+	}
+
+	void DeleteAllChildren() {
+		for (auto c : m_children)
+			delete c;
+		m_children.clear();
 	}
 
 	void UpdateBounds() {
@@ -392,7 +417,7 @@ public:
 		return __super::WillHitBounds(screenSize, GetPos());
 	}
 
-	Shape* HitTestShape(const Shape& shape) {
+	Shape* HitTestShape(Shape* shape) {
 		UpdateBounds();
 
 		RectF rThis;
@@ -400,7 +425,7 @@ public:
 
 		// Quick group bounds check first
 		RectF rShape;
-		shape.GetBoundingBox(&rShape, shape.GetPos());
+		shape->GetBoundingBox(&rShape, shape->GetPos());
 		if (!rThis.hitTest(rShape))
 			return NULL;
 
@@ -412,7 +437,7 @@ public:
 		return NULL;
 	}
 
-	int HitTestShapes(const Shape& shape, std::vector<Shape*>& ret) {
+	int HitTestShapes(Shape* shape, std::vector<Shape*>& ret) {
 		UpdateBounds();
 
 		RectF rThis;
@@ -420,7 +445,7 @@ public:
 
 		// Quick group bounds check first
 		RectF rShape;
-		shape.GetBoundingBox(&rShape, shape.GetPos());
+		shape->GetBoundingBox(&rShape, shape->GetPos());
 		if (!rThis.hitTest(rShape))
 			return 0;
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <D2DWorld.h>
+#include <SS2DWorld.h>
 
-class BouncyWorld : public D2DWorld
+class MenuWorld : public SS2DWorld
 {
 public:
 	const int m_screenWidth = 1920;
@@ -18,14 +18,13 @@ public:
 	const FLOAT menuHeight = m_screenHeight - (menuPosY * 2);
 	const FLOAT menuTextHeight = 100;
 
-	BouncyWorld(Notifier& notifier) :
+	MenuWorld(Notifier& notifier) :
 		m_notifier(notifier),
-		m_menuBackground(Point2F(menuPosX, menuPosY), menuWidth, menuHeight, 0.0f, 0, RGB(255, 255, 255), 0.8F)
+		m_menuBackground(menuPosX, menuPosY, menuWidth, menuHeight, 0.0f, 0, RGB(255, 255, 255), 0.8F)
 	{
 	}
 
-	~BouncyWorld() {
-		SS2DDeInit();
+	~MenuWorld() {
 	}
 
 	w32Size SS2DGetScreenSize() override {
@@ -41,11 +40,10 @@ public:
 				FLOAT width = w32randf(m_minRadius, m_maxRadius);
 				FLOAT height = w32randf(m_minRadius, m_maxRadius);
 
-				Point2F pos(w32randf(0, m_screenWidth - width), w32randf(0, m_screenHeight - height));
-
 				m_movingShapes.push_back(
-				new MovingRectangle(
-					pos,
+				NewMovingRectangle(
+					w32randf(0, m_screenWidth - width),
+					w32randf(0, m_screenHeight - height),
 					width, height,
 					speed,
 					direction,
@@ -53,10 +51,10 @@ public:
 			}
 			else {
 				float radius = w32randf(m_minRadius, m_maxRadius);
-				Point2F pos(w32randf(radius, m_screenWidth - radius), w32randf(radius, m_screenHeight - radius));
 
-				m_movingShapes.push_back(new MovingCircle(
-					pos,
+				m_movingShapes.push_back(NewMovingCircle(
+					w32randf(radius, m_screenWidth - radius),
+					w32randf(radius, m_screenHeight - radius),
 					radius,
 					speed,
 					direction,
@@ -64,22 +62,19 @@ public:
 			}
 		}
 
-		for (auto shape : m_movingShapes) {
-			QueueShape(shape);
-		}
-
 		QueueShape(&m_menuBackground);
 
 		AddMenuItem(L"Invaders", RGB(0, 128, 0), RGB(0, 255, 0), m_amRunInvaders, 95);
 		AddMenuItem(L"Breakout", RGB(128, 0, 0), RGB(255, 0, 0), m_amRunBreakout, 60);
 		AddMenuItem(L"Colors", RGB(0, 0, 128), RGB(0, 0, 255), m_amRunColors, 5);
+		AddMenuItem(L"Road", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunRoad, 5);
+		AddMenuItem(L"Starter", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunStarter, 5);
 		AddMenuItem(L"Exit", RGB(128, 128, 128), RGB(255, 255, 255), m_amQuit, 0);
 
 		return true;
 	}
 
 	void SS2DDeInit() override {
-		m_movingShapes.clear();
 		m_menuitems.clear();
 	}
 
@@ -148,29 +143,21 @@ public:
 protected:
 	void AddMenuItem(LPCWSTR text, COLORREF color, COLORREF highlight, AppMessage am, int percentDone) {
 		size_t menuitems = m_menuitems.size() / 2;
-//		auto p = new MovingRectangle(
-//			Point2F(menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight),
-//			menuWidth * percentDone / 100, menuTextHeight, 0, 0,
-//			color,
-//			0.6f);
-//		QueueShape(p);
 
 		// Create two texts, a normal one and a highlight one. Show the normal one and hide the highlight one.
-		auto t = new MovingText(
+		auto t = NewMovingText(
 			text,
-			Point2F(menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight),
+			menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight,
 			menuWidth, menuTextHeight, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER,
 			color);
 		m_menuitems.push_back(std::make_pair(t, am));
-		QueueShape(t);
 
-		t = new MovingText(
+		t = NewMovingText(
 			text,
-			Point2F(menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight),
+			menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight,
 			menuWidth, menuTextHeight + 5.0F, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER,
 			highlight);
 		m_menuitems.push_back(std::make_pair(t, am));
-		QueueShape(t, false);
 	}
 
 protected:
@@ -183,5 +170,7 @@ public:
 	AppMessage m_amRunInvaders;
 	AppMessage m_amRunBreakout;
 	AppMessage m_amRunColors;
+	AppMessage m_amRunRoad;
+	AppMessage m_amRunStarter;
 	AppMessage m_amQuit;
 };
