@@ -3,7 +3,7 @@
 #include <SS2DWorld.h>
 #include <list>
 
-class RoadWorld : public SS2DWorld
+class TestWorld : public SS2DWorld
 {
 	const FLOAT m_playerMoveSpeed = 10;
 	const int m_screenWidth = 900;
@@ -20,22 +20,26 @@ class RoadWorld : public SS2DWorld
 	};
 
 public:
-	RoadWorld(Notifier& notifier) : 
+	TestWorld(Notifier& notifier) : 
 		m_notifier(notifier)
 	{
 		SS2DSetScreenSize(w32Size(m_screenWidth, m_screenHeight));
 	}
 
 	bool SS2DInit() override {
-		m_player = NewMovingRectangle(430, 850, 100, 30, 0, 0, RGB(255, 255, 255));
-		m_playerBullet = NewMovingCircle(430, 850, 15, 0, 0, c_colorsAvailable[w32rand(6)]);
+		for (auto c : c_colorsAvailable) {
+			m_brushes.push_back(NewResourceBrush(c));
+		}
+
+		m_player = NewMovingRectangle(430, 850, 100, 30, 0, 0, m_brushWhite);
+		m_playerBullet = NewMovingCircle(430, 850, 15, 0, 0, m_brushes[w32rand(6)]);
 
 		for (int i = 0; i < 30; i++) {
-			m_circles.push_back(NewMovingCircle(i * 30, 500, 15, 2, 90, c_colorsAvailable[w32rand(6)]));
+			m_circles.push_back(NewMovingCircle(i * 30.0f, 500, 15, 2, 90, m_brushes[w32rand(6)]));
 		}
 
 		for (int i = 0; i < 30; i++) {
-			m_circles.push_back(NewMovingCircle(i * 30, 300, 15, 2, 90, c_colorsAvailable[w32rand(6)]));
+			m_circles.push_back(NewMovingCircle(i * 30.0f, 300, 15, 2, 90, m_brushes[w32rand(6)]));
 		}
 		return true;
 	}
@@ -56,7 +60,7 @@ public:
 		// Wrap any circles gone off the board
 		for (auto c : m_circles) {
 			if (c->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsright) {
-				c->OffsetPos(Point2F(-m_screenWidth, 0));
+				c->OffsetPos(Point2F((FLOAT)-m_screenWidth, 0));
 			}
 		}
 
@@ -87,7 +91,7 @@ public:
 				m_circles.push_back(bullet);
 				it = m_bullets.erase(it);
 				if (bullet == m_playerBullet) {
-					m_playerBullet = NewMovingCircle(430, 850, 15, 0, 0, c_colorsAvailable[w32rand(6)]);
+					m_playerBullet = NewMovingCircle(430, 850, 15, 0, 0, m_brushes[w32rand(6)]);
 				}
 			}
 			else
@@ -140,6 +144,7 @@ public:
 protected:
 	Notifier& m_notifier;
 
+	std::vector<SS2DBrush*> m_brushes;
 	MovingRectangle* m_player;
 	MovingCircle* m_playerBullet;
 	std::list<MovingCircle*> m_circles;

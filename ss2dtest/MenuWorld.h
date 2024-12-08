@@ -16,8 +16,7 @@ public:
 	const FLOAT menuTextHeight = 100;
 
 	MenuWorld(Notifier& notifier) :
-		m_notifier(notifier),
-		m_menuBackground(menuPosX, menuPosY, menuWidth, menuHeight, 0.0f, 0, RGB(255, 255, 255), 0.8F)
+		m_notifier(notifier)
 	{
 	}
 
@@ -29,6 +28,7 @@ public:
 			FLOAT speed = w32randf(5.0f, 15.f);
 			DWORD direction = w32rand(0, 359);
 			COLORREF color = RGB(w32rand(0, 256), w32rand(0, 256), w32rand(0, 256));
+			auto br = NewResourceBrush(color);
 			if (w32rand(1)) {
 				FLOAT width = w32randf(m_minRadius, m_maxRadius);
 				FLOAT height = w32randf(m_minRadius, m_maxRadius);
@@ -40,7 +40,7 @@ public:
 					width, height,
 					speed,
 					direction,
-					color));
+					br));
 			}
 			else {
 				float radius = w32randf(m_minRadius, m_maxRadius);
@@ -51,16 +51,18 @@ public:
 					radius,
 					speed,
 					direction,
-					color));
+					br));
 			}
 		}
 
-		QueueShape(&m_menuBackground);
+		m_brushMenu = NewResourceBrush(RGB(255, 255, 255), 0.8f);
+
+		m_menuBackground = NewMovingRectangle(menuPosX, menuPosY, menuWidth, menuHeight, 0.0f, 0, m_brushMenu, 0.8f);
 
 		AddMenuItem(L"Invaders", RGB(0, 128, 0), RGB(0, 255, 0), m_amRunInvaders, 95);
 		AddMenuItem(L"Breakout", RGB(128, 0, 0), RGB(255, 0, 0), m_amRunBreakout, 60);
 		AddMenuItem(L"Colors", RGB(0, 0, 128), RGB(0, 0, 255), m_amRunColors, 5);
-		AddMenuItem(L"Road", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunRoad, 5);
+		AddMenuItem(L"Test", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunTest, 5);
 		AddMenuItem(L"Starter", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunStarter, 5);
 		AddMenuItem(L"Exit", RGB(128, 128, 128), RGB(255, 255, 255), m_amQuit, 0);
 
@@ -142,20 +144,22 @@ protected:
 			text,
 			menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight,
 			menuWidth, menuTextHeight, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER,
-			color);
+			NewResourceBrush(color));
 		m_menuitems.push_back(std::make_pair(t, am));
 
 		t = NewMovingText(
 			text,
 			menuPosX, menuPosY + (FLOAT)menuitems * menuTextHeight,
 			menuWidth, menuTextHeight + 5.0F, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER,
-			highlight);
+			NewResourceBrush(highlight));
 		m_menuitems.push_back(std::make_pair(t, am));
 	}
 
 protected:
 	Notifier& m_notifier;				// For sending updates to other parts of the program 
-	MovingRectangle m_menuBackground;	// transparent box around menu items.
+
+	SS2DBrush* m_brushMenu;
+	MovingRectangle* m_menuBackground;	// transparent box around menu items.
 	std::vector<std::pair<MovingText*, AppMessage>> m_menuitems;	// the menu texts
 	std::vector<Shape*> m_movingShapes;	// moving shapes in the background
 
@@ -163,7 +167,7 @@ public:
 	AppMessage m_amRunInvaders;
 	AppMessage m_amRunBreakout;
 	AppMessage m_amRunColors;
-	AppMessage m_amRunRoad;
+	AppMessage m_amRunTest;
 	AppMessage m_amRunStarter;
 	AppMessage m_amQuit;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "d2dWindow.h"
+#include "SS2DBrush.h"
 #define _USE_MATH_DEFINES	// for M_PI
 #include <math.h>
 
@@ -79,18 +80,14 @@ public:
 		hitboundsbottom
 	};
 
-	Shape(FLOAT x, FLOAT y, FLOAT speed, int direction, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_pos(x, y), m_fSpeed(speed), m_parent(NULL), m_pBrush(NULL), m_rgb(rgb), m_alpha(alpha), m_userdata(userdata), m_active(true),
+	Shape(FLOAT x, FLOAT y, FLOAT speed, int direction, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		m_pos(x, y), m_fSpeed(speed), m_parent(NULL), m_pBrush(brush), m_alpha(alpha), m_userdata(userdata), m_active(true),
 		m_childHasMoved(true)
 	{
 		SetDirectionInDeg(direction);
 	}
 
 	~Shape() {
-		SS2DDiscardResources();
-//		if (m_parent) {
-//			m_parent->RemoveChild(this);
-//		}
 	}
 
 	Point2F GetPos(bool includeParent = true) const {
@@ -196,9 +193,6 @@ public:
 		UpdateCache();
 	}
 
-	void SetColor(UINT32 rgb) { m_rgb = rgb; }
-	COLORREF GetColor() { return m_rgb; }
-
 	void SetAlpha(FLOAT alpha) { m_alpha = alpha; }
 	FLOAT GetAlpha() { return m_alpha; }
 
@@ -214,21 +208,14 @@ public:
 
 	bool IsActive() { return m_active; }
 
-	// Resources and drawing
 	virtual void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* m_pIWICFactory, const D2DRectScaler* pRS) {
-		UINT32 rgb =
-			(m_rgb & 0x000000ff) << 16 |
-			(m_rgb & 0x0000ff00) |
-			(m_rgb & 0x00ff0000) >> 16;	// RGB => BGR
-
-		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(rgb, m_alpha), &m_pBrush);
 	}
 
 	virtual void SS2DDiscardResources() {
-		SafeRelease(&m_pBrush);
 	}
 
-	ID2D1SolidColorBrush* GetBrush() { return m_pBrush; }
+	ID2D1SolidColorBrush* GetBrush() { return *m_pBrush; }
+	COLORREF GetBrushColor() { return m_pBrush ? m_pBrush->GetColor() : 0; }
 
 	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) {
 		for (auto m : m_children) {
@@ -341,8 +328,7 @@ protected:
 	Vector2F m_cacheStep;	// Cache the move vector so we're not doing constant Trig
 
 	// Colour
-	ID2D1SolidColorBrush* m_pBrush;
-	UINT32 m_rgb;
+	SS2DBrush* m_pBrush;
 	FLOAT m_alpha;
 
 	// Is it drawn?

@@ -30,8 +30,9 @@
     <ClCompile Include="d2dwrite.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SS2DBrush.h" />
     <ClInclude Include="d2dWindow.h" />
-    <ClInclude Include="d2dbitmap.h" />
+    <ClInclude Include="SS2DBitmap.h" />
     <ClInclude Include="d2dtypes.h" />
     <ClInclude Include="SS2DWorld.h" />
     <ClInclude Include="d2dwrite.h" />

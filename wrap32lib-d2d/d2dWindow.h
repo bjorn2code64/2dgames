@@ -9,8 +9,8 @@
 #include <d2d1.h>
 #include <d2d1helper.h>
 
-#include "d2dbitmap.h"
 #include "d2dwrite.h"
+#include "SS2Dbitmap.h"
 #include "Shape.h"
 
 #include <string>

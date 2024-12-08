@@ -161,10 +161,10 @@ public:
 				for (int col = 0; col < 16; col++) {
 					auto sq = Get(row, col);
 					if (sq) {
-						COLORREF crThis = sq->GetColor();
+						COLORREF crThis = sq->GetBrushColor();
 						matched.push_back(sq);
 						for (auto m : matched) {
-							if (m->GetColor() != crThis) {
+							if (m->GetBrushColor() != crThis) {
 								matched.pop_back();	// remove the square that broke the chain
 								found |= CheckMatched(matched, deleteShapes);
 								matched.clear();
@@ -190,10 +190,10 @@ public:
 				for (int row = 0; row < 20; row++) {
 					auto sq = Get(row, col);
 					if (sq) {
-						COLORREF crThis = sq->GetColor();
+						COLORREF crThis = sq->GetBrushColor();
 						matched.push_back(sq);
 						for (auto m : matched) {
-							if (m->GetColor() != crThis) {
+							if (m->GetBrushColor() != crThis) {
 								matched.pop_back();	// remove the square that broke the chain
 								found |= CheckMatched(matched, deleteShapes);
 								matched.clear();
@@ -218,19 +218,22 @@ public:
 	};
 
 	ColorsWorld(Notifier& notifier) : 
-		m_notifier(notifier), 
-		m_fallingGroup(400.0f, 0.0f, c_fallingSpeed, 180) {
+		m_notifier(notifier) {
 		SS2DSetScreenSize(w32Size(c_screenWidth, c_screenHeight));
 	}
 
 	bool SS2DInit() override {
+		m_fallingGroup = NewMovingGroup(400.0f, 0.0f, c_fallingSpeed, 180);
+
+		for (auto c : c_colorsAvailable) {
+			m_brushes.push_back(NewResourceBrush(c));
+		}
+
 		Drop();
 		return true;
 	}
 
 	void SS2DDeInit() {
-		RemoveShape(&m_fallingGroup);
-		m_fallingGroup.RemoveAllChildren(true);
 		m_board.Clear();
 	}
 
@@ -253,18 +256,18 @@ public:
 		else {
 
 			// Check for bottom of screen
-			if (m_fallingGroup.WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
-				m_fallingGroup.SetPos(Point2F(m_fallingGroup.GetPos().x, c_screenHeight - 3 * c_blockSize));
+			if (m_fallingGroup->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
+				m_fallingGroup->SetPos(Point2F(m_fallingGroup->GetPos().x, c_screenHeight - 3 * c_blockSize));
 				if (!AddToBoard()) {
 					Drop();	// only drop if no matches were made
 				}
 			}
 
 			// Check if we've hit anything else
-			if (m_board.WillHit(&m_fallingGroup)) {
-				FLOAT y = m_fallingGroup.GetPos().y;	// align the falling group with the grid
+			if (m_board.WillHit(m_fallingGroup)) {
+				FLOAT y = m_fallingGroup->GetPos().y;	// align the falling group with the grid
 				int yInt = (int)(((y - 1) / c_blockSize) + 1) * c_blockSize;
-				m_fallingGroup.Offset(Point2F(0, yInt - y));
+				m_fallingGroup->Offset(Point2F(0, yInt - y));
 
 				if (!AddToBoard()) {
 					Drop();	// only drop if no matches were made
@@ -280,37 +283,37 @@ public:
 					m_notifier.Notify(m_amQuit);	// QUIT
 				}
 				else if (ev.m_wParam == VK_RIGHT) {	// Move right
-					if ((m_fallingGroup.GetPos().x < SS2DGetScreenSize().cx - c_blockSize) &&
-						m_board.IsClear((int)(m_fallingGroup.GetPos().y / c_blockSize), (int)(m_fallingGroup.GetPos().x / c_blockSize + 1), 4))
+					if ((m_fallingGroup->GetPos().x < SS2DGetScreenSize().cx - c_blockSize) &&
+						m_board.IsClear((int)(m_fallingGroup->GetPos().y / c_blockSize), (int)(m_fallingGroup->GetPos().x / c_blockSize + 1), 4))
 					{
-						m_fallingGroup.OffsetPos(Point2F((FLOAT)c_blockSize, 0));
+						m_fallingGroup->OffsetPos(Point2F((FLOAT)c_blockSize, 0));
 					}
 				}
 				else if (ev.m_wParam == VK_LEFT) {	// Move left
-					if ((m_fallingGroup.GetPos().x >= c_blockSize) &&
-						m_board.IsClear((int)(m_fallingGroup.GetPos().y / c_blockSize), (int)(m_fallingGroup.GetPos().x / c_blockSize - 1), 4))
+					if ((m_fallingGroup->GetPos().x >= c_blockSize) &&
+						m_board.IsClear((int)(m_fallingGroup->GetPos().y / c_blockSize), (int)(m_fallingGroup->GetPos().x / c_blockSize - 1), 4))
 					{
-						m_fallingGroup.OffsetPos(Point2F((FLOAT)-c_blockSize, 0));
+						m_fallingGroup->OffsetPos(Point2F((FLOAT)-c_blockSize, 0));
 					}
 				}
 				else if (ev.m_wParam == VK_CONTROL) {	// Rotate colors
-					Shape* p = m_fallingGroup.GetChildren()[2];
-					m_fallingGroup.RemoveChild(p);
-					m_fallingGroup.InsertChild(p);
+					Shape* p = m_fallingGroup->GetChildren()[2];
+					m_fallingGroup->RemoveChild(p);
+					m_fallingGroup->InsertChild(p);
 
 					FLOAT y = 0.0f;
-					for (auto c : m_fallingGroup.GetChildren()) {
+					for (auto c : m_fallingGroup->GetChildren()) {
 						c->SetPos(Point2F(0.0f, y));
 						y += c_blockSize;
 					}
 				}
 				else if (ev.m_wParam == VK_DOWN) {
-					m_fallingGroup.SetSpeed(c_fallingSpeed * 4);
+					m_fallingGroup->SetSpeed(c_fallingSpeed * 4);
 				}
 			}
 			else if (ev.m_msg == WM_KEYUP) {
 				if (ev.m_wParam == VK_DOWN) {
-					m_fallingGroup.SetSpeed(c_fallingSpeed);
+					m_fallingGroup->SetSpeed(c_fallingSpeed);
 				}
 			}
 			events.pop();
@@ -321,18 +324,18 @@ public:
 
 	bool AddToBoard() {
 		// Add the blocks to the board
-		for (auto mr : m_fallingGroup.GetChildren()) {
+		for (auto mr : m_fallingGroup->GetChildren()) {
 			m_board.Set((int)(mr->GetPos().y / c_blockSize), (int)(mr->GetPos().x / c_blockSize), (MovingRectangle*)mr);
 			QueueShape(mr);
 		}
 
 		// Remove them from the group
-		m_fallingGroup.RemoveAllChildren();
+		m_fallingGroup->RemoveAllChildren();
 		// Remove the group from the engine
-		RemoveShape(&m_fallingGroup);
+		RemoveShape(m_fallingGroup);
 
 		if (m_board.MarkMatches()) {
-			m_fallingGroup.SetActive(false);
+			m_fallingGroup->SetActive(false);
 			return true;
 		}
 
@@ -340,28 +343,29 @@ public:
 	}
 
 	void Drop() {
-		m_fallingGroup.SetActive(true);
+		m_fallingGroup->SetActive(true);
 
 		// Reset the group
-		m_fallingGroup.SetPos(Point2F((c_screenWidth / 2 ) - c_blockSize, 0));
-		m_fallingGroup.AddChild(
-			new MovingRectangle(0, 0, c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
+		m_fallingGroup->SetPos(Point2F((c_screenWidth / 2 ) - c_blockSize, 0));
+		m_fallingGroup->AddChild(
+			new MovingRectangle(0, 0, c_blockSize, c_blockSize, 0, 0, m_brushes[w32rand((DWORD)c_colorsInUse - 1)])
 		);
-		m_fallingGroup.AddChild(
-			new MovingRectangle(0, c_blockSize, c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
+		m_fallingGroup->AddChild(
+			new MovingRectangle(0, c_blockSize, c_blockSize, c_blockSize, 0, 0, m_brushes[w32rand((DWORD)c_colorsInUse - 1)])
 		);
-		m_fallingGroup.AddChild(
-			new MovingRectangle(0, c_blockSize * 2, c_blockSize, c_blockSize, 0, 0, c_colorsAvailable[w32rand((DWORD)c_colorsInUse - 1)])
+		m_fallingGroup->AddChild(
+			new MovingRectangle(0, c_blockSize * 2, c_blockSize, c_blockSize, 0, 0, m_brushes[w32rand((DWORD)c_colorsInUse - 1)])
 		);
 
 		// Add it back to the engine
-		QueueShape(&m_fallingGroup);
+		QueueShape(m_fallingGroup);
 	}
 
 protected:
-	MovingGroup m_fallingGroup;
+	MovingGroup* m_fallingGroup;
 	Board m_board;
 	Notifier& m_notifier;
+	std::vector<SS2DBrush*> m_brushes;
 
 public:
 	AppMessage m_amQuit;

@@ -10,7 +10,7 @@
 #include "InvaderWorld.h"
 #include "BreakoutWorld.h"
 #include "ColorsWorld.h"
-#include "RoadWorld.h"
+#include "TestWorld.h"
 #include "StarterWorld.h"
 
 #define APPNAME L"w32ld2d"
@@ -29,7 +29,7 @@ public:
 		m_worldInvaders(m_notifier),
 		m_worldBreakout(m_notifier),
 		m_worldColors(m_notifier),
-		m_worldRoad(m_notifier),
+		m_worldTest(m_notifier),
 		m_worldStarter(m_notifier)
 	{
 		srand((unsigned int)time(NULL));	// Stop random numbers being the same every time
@@ -50,14 +50,14 @@ public:
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunInvaders);
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunBreakout);
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunColors);
-		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunRoad);
+		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunTest);
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amRunStarter);
 
 		m_notifier.AddNotifyTarget(this, m_worldMenu.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldInvaders.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldBreakout.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldColors.m_amQuit);
-		m_notifier.AddNotifyTarget(this, m_worldRoad.m_amQuit);
+		m_notifier.AddNotifyTarget(this, m_worldTest.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldStarter.m_amQuit);
 
 		Show(nCmdShow);
@@ -122,14 +122,14 @@ protected:
 			m_worldActive = &m_worldColors;
 			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
-		else if (message == m_worldMenu.m_amRunRoad) {
-			// Disable the menu world and start Road world
+		else if (message == m_worldMenu.m_amRunTest) {
+			// Disable the menu world and start Test world
 			Stop();
-			m_worldActive = &m_worldRoad;
+			m_worldActive = &m_worldTest;
 			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
 		else if (message == m_worldMenu.m_amRunStarter) {
-			// Disable the menu world and start Road world
+			// Disable the menu world and start Starter world
 			Stop();
 			m_worldActive = &m_worldStarter;
 			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
@@ -137,7 +137,7 @@ protected:
 		else if ((message == m_worldInvaders.m_amQuit) ||
 			(message == m_worldBreakout.m_amQuit) ||
 			(message == m_worldColors.m_amQuit) ||
-			(message == m_worldRoad.m_amQuit) ||
+			(message == m_worldTest.m_amQuit) ||
 			(message == m_worldStarter.m_amQuit)
 			) {
 			// Disable the game world and start menu world
@@ -159,7 +159,7 @@ protected:
 	InvaderWorld m_worldInvaders;
 	BreakoutWorld m_worldBreakout;
 	ColorsWorld m_worldColors;
-	RoadWorld m_worldRoad;
+	TestWorld m_worldTest;
 	StarterWorld m_worldStarter;
 
 	SS2DWorld* m_worldActive;

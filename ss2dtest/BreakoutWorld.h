@@ -42,15 +42,7 @@ protected:
 
 public:
 	BreakoutWorld(Notifier& notifier) :
-		m_notifier(notifier),
-		m_bat(0, 0, m_batStartWidth, m_batHeight, 0, 0, RGB(255, 255, 255)),
-		m_tdBatLarger(batLargerTime, false),
-		m_tdBallFaster(ballFasterTime, false),
-		m_tdShooterMode(ballShooterTime, false),
-		m_playerBullet(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_bulletColour),
-		m_countdownShooter(400, 1030, 100.0F, 20.0f, 0.0f, 0, RGB(255, 0, 0)),
-		m_textScoreLabel(L"Score:", 10, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, RGB(255, 255, 255)),
-		m_textScore(L"0", 50, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, RGB(255, 255, 255))
+		m_notifier(notifier)
 	{
 	}
 	~BreakoutWorld() {}
@@ -89,7 +81,7 @@ public:
 
 			int x = 0;
 			for (int i = 0; i < s.length(); i++) {
-				COLORREF brickColor = RGB(0, 0, 0);
+				SS2DBrush* brush = NULL;
 				int brickType = m_brickNormal;
 				bool isBrick = true;
 				SS2DBitmap* bitmap = NULL;
@@ -97,7 +89,7 @@ public:
 				switch (s.at(i)) {
 					case '0':
 						brickType = m_brickNormal;
-						brickColor = RGB(200, 200, 200);
+						brush = m_brushBrick;
 						break;
 					case '1':
 						brickType = m_brickBatLarger;
@@ -105,7 +97,7 @@ public:
 						break;
 					case '2':
 						brickType = m_brickBallSlower;
-						brickColor = RGB(0, 0, 255);
+						brush = m_brushBrickSlower;
 						break;
 					case '3':
 						brickType = m_brickMultiball;
@@ -122,22 +114,22 @@ public:
 
 				if (isBrick) {
 					if (pCurrentGroup == NULL) {
-						pCurrentGroup = new MovingGroup;
+						pCurrentGroup = NewMovingGroup(0, 0, 0, 0);
 						m_groups.push_back(pCurrentGroup);
 					}
 
 					if (bitmap) {
-						MovingBitmap* pBrick = new MovingBitmap(bitmap, x * m_brickWidth, y * m_brickHeight,
+						MovingBitmap* pBrick = NewMovingBitmap(bitmap, x * m_brickWidth, y * m_brickHeight,
 							m_brickWidth, m_brickHeight, 0, 0
 						);
 						m_bricks.push_back(pBrick);
 						pBrick->SetUserData(brickType);
 						pCurrentGroup->AddChild(pBrick);
 					}
-					else {
-						MovingRectangle* pBrick = new MovingRectangle(x * m_brickWidth, y * m_brickHeight,
+					else if (brush) {
+						MovingRectangle* pBrick = NewMovingRectangle(x * m_brickWidth, y * m_brickHeight,
 							m_brickWidth, m_brickHeight, 0, 0,
-							brickColor
+							brush
 						);
 						m_bricks.push_back(pBrick);
 						pBrick->SetUserData(brickType);
@@ -150,16 +142,11 @@ public:
 
 			if (x == 0) {
 				if (pCurrentGroup) {
-					QueueShape(pCurrentGroup);
 					pCurrentGroup = NULL;
 				}
 			}
 
 			y++;
-		}
-
-		if (pCurrentGroup) {
-			QueueShape(pCurrentGroup);
 		}
 
 /*		for (FLOAT x = 0; x < m_screenWidth; x += m_brickWidth) {
@@ -190,30 +177,35 @@ public:
 	}
 
 	bool SS2DInit() {
+		m_brushBrick = NewResourceBrush(RGB(200, 200, 200));
+		m_brushBrickSlower = NewResourceBrush(RGB(0, 0, 255));
+		m_brushRed = NewResourceBrush(RGB(255, 0, 0));
+
 		m_bitmapMultiball = NewResourceBitmap(L"multiball.png");
 		m_bitmapShooter = NewResourceBitmap(L"shooter.png");
 		m_bitmapBatLarger = NewResourceBitmap(L"batlarger.png");
 
+		m_bat = NewMovingRectangle(0, 0, m_batStartWidth, m_batHeight, 0, 0, m_brushWhite);
+		m_countdownShooter = NewMovingRectangle(400, 1030, 100.0F, 20.0f, 0.0f, 0, m_brushRed);
+		m_playerBullet = NewMovingRectangle(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_brushRed, 1.0, 0, false);
+
+		m_textScoreLabel = NewMovingText(L"Score:", 10, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushWhite);
+		m_textScore = NewMovingText(L"0", 50, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, m_brushWhite);
+
+		m_tdBatLarger.SetPeriod(batLargerTime, false);
+		m_tdBallFaster.SetPeriod(ballFasterTime, false);
+		m_tdShooterMode.SetPeriod(ballShooterTime, false);
+
 		m_batWidthRequired = m_batStartWidth;
 		m_ballSpeed = m_ballStartSpeed;
 		m_score = 0;
-		m_textScore.SetText(std::to_wstring(m_score).c_str());
+		m_textScore->SetText(std::to_wstring(m_score).c_str());
 
-		m_balls.push_back(new MovingCircle(200.0f, 600.0f, m_ballRadius, m_ballStartSpeed, 135, RGB(255, 255, 255)));
+		m_balls.push_back(NewMovingCircle(200.0f, 600.0f, m_ballRadius, m_ballStartSpeed, 135, m_brushWhite));
 
 		GenerateBricks();
 
-		QueueShape(&m_bat);
-		for (auto pBall : m_balls) {
-			QueueShape(pBall);
-		}
-
 		m_tdBallFaster.SetActive(true);
-		QueueShape(&m_playerBullet, false);
-		QueueShape(&m_countdownShooter, false);
-
-		QueueShape(&m_textScore);
-		QueueShape(&m_textScoreLabel);
 
 		return true;
 	}
@@ -244,23 +236,23 @@ public:
 		if (m_tdShooterMode.Elapsed(tick)) {
 			m_shooterMode = false;
 			m_tdShooterMode.SetActive(false);
-			if (m_playerBullet.GetUserData() == 0) {	// hide the bullet if it's not inflight
-				m_playerBullet.SetActive(false);
+			if (m_playerBullet->GetUserData() == 0) {	// hide the bullet if it's not inflight
+				m_playerBullet->SetActive(false);
 			}
-			m_countdownShooter.SetActive(false);
+			m_countdownShooter->SetActive(false);
 		}
 
 		while (!events.empty()) {
 			auto& e = events.front();
 			if (e.m_msg == WM_LBUTTONDOWN) {
 				if (m_shooterMode) {
-					if (m_playerBullet.GetUserData() == 0) {
-						m_playerBullet.SetDirectionInRad(0);
-						m_playerBullet.SetSpeed(m_playerbulletSpeed);
-						m_playerBullet.SetUserData(1);
+					if (m_playerBullet->GetUserData() == 0) {
+						m_playerBullet->SetDirectionInRad(0);
+						m_playerBullet->SetSpeed(m_playerbulletSpeed);
+						m_playerBullet->SetUserData(1);
 					}
 				}
-				m_countdownShooter.SetWidth((FLOAT)m_tdShooterMode.Remaining(tick) / 50.0f);
+				m_countdownShooter->SetWidth((FLOAT)m_tdShooterMode.Remaining(tick) / 50.0f);
 			}
 			else if (e.m_msg == WM_KEYDOWN) {
 				if (e.m_wParam == VK_ESCAPE) {
@@ -270,18 +262,18 @@ public:
 			events.pop();
 		}
 
-		FLOAT batWidth = m_bat.GetWidth();
+		FLOAT batWidth = m_bat->GetWidth();
 
 		// Move the bat to follow the mouse position
 		// Position the bat such that the middle is level with the mouse x position
 		FLOAT batX = mouse.x - batWidth / 2.0F;
-		m_bat.SetPos(Point2F(LimitF(batX, 0.0f, SS2DGetScreenSize().cx - batWidth), 1000.0f));
-		if (m_playerBullet.GetUserData() == 0) {
+		m_bat->SetPos(Point2F(LimitF(batX, 0.0f, SS2DGetScreenSize().cx - batWidth), 1000.0f));
+		if (m_playerBullet->GetUserData() == 0) {
 			FLOAT bulletX = mouse.x - m_bulletWidth / 2.0F;
-			m_playerBullet.SetPos(Point2F(LimitF(bulletX, 0.0f, SS2DGetScreenSize().cx - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
+			m_playerBullet->SetPos(Point2F(LimitF(bulletX, 0.0f, SS2DGetScreenSize().cx - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
 		}
 		else {
-			if (m_playerBullet.WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {
+			if (m_playerBullet->WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {
 				ResetBullet();
 			}
 		}
@@ -318,10 +310,10 @@ public:
 
 		// Is the bat the correct size?
 		if (batWidth < m_batWidthRequired) {
-			m_bat.SetWidth(batWidth + 5.0f);
+			m_bat->SetWidth(batWidth + 5.0f);
 		}
 		else if (batWidth > m_batWidthRequired) {
-			m_bat.SetWidth(batWidth - 5.0f);
+			m_bat->SetWidth(batWidth - 5.0f);
 		}
 
 		// Move any falling bricks
@@ -348,7 +340,7 @@ public:
 			pBrickHit->SetActive(false);
 		}
 		m_score += 10;
-		m_textScore.SetText(std::to_wstring(m_score).c_str());
+		m_textScore->SetText(std::to_wstring(m_score).c_str());
 	}
 
 	bool CheckBallHitScreenEdges(Shape* pBall) {
@@ -376,8 +368,8 @@ public:
 
 		// Did the bat hit the ball?
 		if (pBall->WillBounceOffRectSides(m_bat) || pBall->WillBounceOffRectCorners(m_bat)) {
-			FLOAT batWidth = m_bat.GetWidth();
-			FLOAT middleOfBat = m_bat.GetPos().x + batWidth / 2.0f;
+			FLOAT batWidth = m_bat->GetWidth();
+			FLOAT middleOfBat = m_bat->GetPos().x + batWidth / 2.0f;
 			FLOAT middleOfBall = pBall->GetPos().x + m_ballRadius;
 			FLOAT diff = middleOfBall - middleOfBat;	// +ve = ball to the right of the middle
 			diff /= (batWidth / 2.0f);		// diff will go from -1 -> +1
@@ -396,7 +388,7 @@ public:
 			if (group->WillHitShapes(*pBall, bricksHit) > 0) {
 				for (auto pBrick : bricksHit) {
 					if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {	// brick is visible and not falling
-						if (pBall->WillBounceOffRectSides(*pBrick)) {
+						if (pBall->WillBounceOffRectSides(pBrick)) {
 							special = (int)pBrick->GetUserData();
 							hit = true;
 							pBrickHit = pBrick;
@@ -408,7 +400,7 @@ public:
 				if (hit) {
 					for (auto pBrick : bricksHit) {
 						if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
-							if (pBall->WillBounceOffRectCorners(*pBrick)) {
+							if (pBall->WillBounceOffRectCorners(pBrick)) {
 								special = (int)pBrick->GetUserData();
 								pBrickHit = pBrick;
 								break;
@@ -449,7 +441,7 @@ public:
 
 	void CheckBatHitBrick() {
 		for (auto pBrick : m_bricks) {
-			if (pBrick->IsActive() && m_bat.HitTestShape(pBrick)) {
+			if (pBrick->IsActive() && m_bat->HitTestShape(pBrick)) {
 				// The bat hit a (falling) brick. Activate the effect.
 				int special = (int)pBrick->GetUserData();
 				if (special == m_brickBatLarger) {
@@ -477,9 +469,9 @@ public:
 						int direction = pBall->GetDirectionInDeg();
 
 						// Add two more balls at this position
-						MovingCircle* pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction + 2, RGB(255, 255, 255));
+						MovingCircle* pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction + 2, m_brushWhite);
 						newBalls.push_back(pBallNew);
-						pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction - 2, RGB(255, 255, 255));
+						pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction - 2, m_brushWhite);
 						newBalls.push_back(pBallNew);
 					}
 
@@ -492,8 +484,8 @@ public:
 				else if (special == m_brickShooter) {
 					m_shooterMode = true;
 					m_tdShooterMode.SetActive(true);
-					m_playerBullet.SetActive(true);
-					m_countdownShooter.SetActive(true);
+					m_playerBullet->SetActive(true);
+					m_countdownShooter->SetActive(true);
 				}
 				pBrick->SetActive(false);
 			}
@@ -501,9 +493,9 @@ public:
 	}
 
 	void ResetBullet() {
-		m_playerBullet.SetUserData(0);
+		m_playerBullet->SetUserData(0);
 		if (!m_shooterMode) {
-			m_playerBullet.SetActive(false);
+			m_playerBullet->SetActive(false);
 		}
 	}
 
@@ -514,7 +506,7 @@ public:
 
 		for (auto pBrick : m_bricks) {
 			if (pBrick->IsActive() && (pBrick->GetSpeed() == 0.0F)) {
-				if (m_playerBullet.HitTestShape(pBrick)) {
+				if (m_playerBullet->HitTestShape(pBrick)) {
 					BrickWasHit(pBrick);
 					ResetBullet();
 				}
@@ -541,29 +533,34 @@ public:
 	}
 
 protected:
+	Notifier& m_notifier;
+
+	SS2DBrush* m_brushBrick;
+	SS2DBrush* m_brushBrickSlower;
+	SS2DBrush* m_brushRed;
+
+	MovingRectangle* m_bat;
 	std::list<MovingCircle*> m_balls;
-	MovingRectangle m_bat;
-	FLOAT m_batWidthRequired;
 	std::vector<Shape*> m_bricks;
 	std::vector<MovingGroup*> m_groups;
+	int m_score;
+
+	FLOAT m_batWidthRequired;
 	TickDelta m_tdBatLarger;
+
 	TickDelta m_tdBallFaster;
-	TickDelta m_tdShooterMode;
 	FLOAT m_ballSpeed;
-	MovingRectangle m_countdownShooter;
+
+	TickDelta m_tdShooterMode;
+	MovingRectangle* m_countdownShooter;
+	bool m_shooterMode;
+	MovingRectangle* m_playerBullet;
+
 	SS2DBitmap* m_bitmapMultiball;
 	SS2DBitmap* m_bitmapShooter;
 	SS2DBitmap* m_bitmapBatLarger;
-	MovingText m_textScoreLabel;
-	MovingText m_textScore;
-	int m_score;
-
-	Notifier& m_notifier;
-
-	// Shooter mode
-	bool m_shooterMode;
-	MovingRectangle m_playerBullet;
-
+	MovingText* m_textScoreLabel;
+	MovingText* m_textScore;
 public:
 	AppMessage m_amQuit;
 };

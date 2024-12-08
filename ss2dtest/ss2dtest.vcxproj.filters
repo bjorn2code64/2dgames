@@ -8,7 +8,7 @@
     <ClInclude Include="BreakoutWorld.h" />
     <ClInclude Include="ColorsWorld.h" />
     <ClInclude Include="InvaderWorld.h" />
-    <ClInclude Include="RoadWorld.h" />
+    <ClInclude Include="TestWorld.h" />
     <ClInclude Include="StarterWorld.h" />
   </ItemGroup>
   <ItemGroup>

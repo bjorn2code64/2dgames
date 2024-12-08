@@ -5,8 +5,8 @@
 class MovingCircle : public Shape
 {
 public:
-	MovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		Shape(x, y, speed, dir, rgb, alpha, userdata), m_fRadius(radius) {}
+	MovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		Shape(x, y, speed, dir, brush, alpha, userdata), m_fRadius(radius) {}
 
 	bool HitTest(Point2F pos) override {
 		float distSq = (pos.x - m_pos.x) * (pos.x - m_pos.x) +
@@ -35,11 +35,11 @@ public:
 	}
 
 	// Some bounce code for rectangle - sides and corners. Not quite right but close.
-	bool WillBounceOffRectSides(const Shape& shape) {
-		Point2F pos = shape.GetPos();	// Get where shape is going to be
-		shape.MovePos(pos);
+	bool WillBounceOffRectSides(Shape* shape) {
+		Point2F pos = shape->GetPos();	// Get where shape is going to be
+		shape->MovePos(pos);
 		RectF r;
-		shape.GetBoundingBox(&r, pos);
+		shape->GetBoundingBox(&r, pos);
 
 		pos = GetPos();	// where we are
 		MovePos(pos);	// where we will be
@@ -76,11 +76,11 @@ public:
 		return false;
 	}
 
-	bool WillBounceOffRectCorners(const Shape& shape) {
-		Point2F pos = shape.GetPos();
-		shape.MovePos(pos);
+	bool WillBounceOffRectCorners(Shape* shape) {
+		Point2F pos = shape->GetPos();
+		shape->MovePos(pos);
 		RectF r;
-		shape.GetBoundingBox(&r, pos);
+		shape->GetBoundingBox(&r, pos);
 
 		pos = GetPos();	// where we are
 		MovePos(pos);	// where we will be
@@ -155,8 +155,8 @@ protected:
 class MovingRectangle : public Shape
 {
 public:
-	MovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		Shape(x, y, speed, dir, rgb, alpha, userdata), m_fWidth(width), m_fHeight(height)
+	MovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+		Shape(x, y, speed, dir, brush, alpha, userdata), m_fWidth(width), m_fHeight(height)
 	{
 	}
 
@@ -253,9 +253,9 @@ protected:
 
 class MovingText : public Shape {
 public:
-	MovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+	MovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
 		m_text(wsz),
-		Shape(x, y, speed, dir, rgb, alpha, userdata),
+		Shape(x, y, speed, dir, brush, alpha, userdata),
 		m_fWidth(width), m_fHeight(height),
 		m_pWTF(NULL),
 		m_ta(ta)
@@ -305,7 +305,7 @@ public:
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		pRenderTarget->DrawTextW(m_text.c_str(), (UINT32)m_text.length(), m_pWTF, r, m_pBrush);
+		pRenderTarget->DrawTextW(m_text.c_str(), (UINT32)m_text.length(), m_pWTF, r, *m_pBrush);
 		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
@@ -328,17 +328,17 @@ class MovingGroup : public MovingRectangle {
 public:
 	// Set width/height to !0 to debug where the shape is
 	MovingGroup() :
-		MovingRectangle(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0, RGB(255, 0, 255), 1.0F, 0)
+		MovingRectangle(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0, NULL, 1.0F, 0)
 	{
 	}
 
 	MovingGroup(FLOAT x, FLOAT y, FLOAT speed, int dir, LPARAM userdata = 0) :
-		MovingRectangle(x, y, 0.0f, 0.0f, speed, dir, RGB(255, 0, 255), 1.0F, userdata)
+		MovingRectangle(x, y, 0.0f, 0.0f, speed, dir, NULL, 1.0F, userdata)
 	{
 	}
 
-	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, rgb, alpha, userdata);
+	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, brush, alpha, userdata);
 		AddChild(p);
 		return p;
 	}

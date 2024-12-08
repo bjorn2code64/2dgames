@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MovingShapes.h"
+#include "SS2DBrush.h"
 
 class TickDelta {
 public:
@@ -8,7 +9,7 @@ public:
 		m_ullLast = GetTickCount64();
 	}
 
-	void SetPeriod(ULONGLONG periodMS) {
+	void SetPeriod(ULONGLONG periodMS, bool active = true) {
 		m_periodMS = periodMS;
 		m_ullLast = GetTickCount64();
 	}
@@ -53,6 +54,7 @@ public:
 		m_colorBackground(D2D1::ColorF::Black),
 		m_screenSize(1920, 1080)
 	{
+		m_brushWhite = NewResourceBrush(RGB(255, 255, 255));
 	}
 
 	~SS2DWorld() {
@@ -64,7 +66,17 @@ public:
 		}
 		m_shapes.clear();
 
+		for (auto b : m_brushes) {
+			b->Clear();
+		}
+		m_brushes.clear();
 		return true;
+	}
+
+	SS2DBrush* NewResourceBrush(COLORREF cr, FLOAT alpha = 1.0) {
+		SS2DBrush* p = new SS2DBrush(cr, alpha);
+		QueueResourceBrush(p);
+		return p;
 	}
 
 	SS2DBitmap* NewResourceBitmap(LPCWSTR filePath) {
@@ -73,14 +85,14 @@ public:
 		return p;
 	}
 
-	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, rgb, alpha, userdata);
+	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, brush, alpha, userdata);
 		QueueShape(p, active);
 		return p;
 	}
 
-	MovingCircle* NewMovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingCircle* p = new MovingCircle(x, y, radius, speed, dir, rgb, alpha, userdata);
+	MovingCircle* NewMovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingCircle* p = new MovingCircle(x, y, radius, speed, dir, brush, alpha, userdata);
 		QueueShape(p, active);
 		return p;
 	}
@@ -91,8 +103,8 @@ public:
 		return p;
 	}
 
-	MovingText* NewMovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, UINT32 rgb, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingText* p = new MovingText(wsz, x, y, width, height, speed, dir, ta, rgb, alpha, userdata);
+	MovingText* NewMovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingText* p = new MovingText(wsz, x, y, width, height, speed, dir, ta, brush, alpha, userdata);
 		QueueShape(p, active);
 		return p;
 	}
@@ -143,6 +155,13 @@ public:
 	}
 
 	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
+		while (!m_brushQueue.empty()) {
+			auto p = m_brushQueue.front();
+			p->Create(pRenderTarget);
+			m_brushes.push_back(p);
+			m_brushQueue.pop();
+		}
+
 		while (!m_bitmapQueue.empty()) {
 			auto p = m_bitmapQueue.front();
 			p->LoadFromFile(pRenderTarget, pIWICFactory);
@@ -160,6 +179,10 @@ public:
 		m_shapesQueue.push_back(std::make_pair(p, active));
 	}
 
+	void QueueResourceBrush(SS2DBrush* p) {
+		m_brushQueue.push(p);
+	}
+
 	void QueueResourceBitmap(SS2DBitmap* p) {
 		m_bitmapQueue.push(p);
 	}
@@ -174,6 +197,7 @@ public:
 			delete c;
 		}
 	}
+
 	virtual void SS2DDeInit() {
 	}
 
@@ -211,9 +235,12 @@ protected:
 
 protected:
 	std::vector<Shape*> m_shapes;
+	std::vector<SS2DBrush*> m_brushes;
 	std::vector<std::pair<Shape*, bool>> m_shapesQueue;
 	std::queue<SS2DBitmap*> m_bitmapQueue;
+	std::queue<SS2DBrush*> m_brushQueue;
 	w32Size m_screenSize;
+	SS2DBrush* m_brushWhite;
 
 public:
 	D2D1::ColorF m_colorBackground;
