@@ -1,93 +1,120 @@
 #pragma once
 
 #include <SS2DWorld.h>
+#include <list>
 
 class RoadWorld : public SS2DWorld
 {
-	const int m_screenWidth = 1920;
-	const int m_screenHeight = 1080;
+	const FLOAT m_playerMoveSpeed = 10;
+	const int m_screenWidth = 900;
+	const int m_screenHeight = 900;
+
+	const std::vector<COLORREF> c_colorsAvailable = {
+		RGB(255, 0, 0),
+		RGB(0, 255, 0),
+		RGB(0, 0, 255),
+		RGB(255, 255, 0),
+		RGB(255, 0, 255),
+		RGB(0, 255, 255),
+		RGB(255, 255, 255)
+	};
 
 public:
 	RoadWorld(Notifier& notifier) : 
-		m_notifier(notifier),
-		m_player(910, 900, 50, 100, 0, 0, RGB(255, 255, 255)),
-		m_roadLeft(800),
-		m_roadWidth(400),
-		m_rdNewRoad(200),
-		m_speed(5)
+		m_notifier(notifier)
 	{
-	}
-
-	w32Size SS2DGetScreenSize() override {
-		return w32Size(m_screenWidth, m_screenHeight);
+		SS2DSetScreenSize(w32Size(m_screenWidth, m_screenHeight));
 	}
 
 	bool SS2DInit() override {
-		m_player.SetPos(Point2F(910, 900));
-		QueueShape(&m_player);
+		m_player = NewMovingRectangle(430, 850, 100, 30, 0, 0, RGB(255, 255, 255));
+		m_playerBullet = NewMovingCircle(430, 850, 15, 0, 0, c_colorsAvailable[w32rand(6)]);
+
+		for (int i = 0; i < 30; i++) {
+			m_circles.push_back(NewMovingCircle(i * 30, 500, 15, 2, 90, c_colorsAvailable[w32rand(6)]));
+		}
+
+		for (int i = 0; i < 30; i++) {
+			m_circles.push_back(NewMovingCircle(i * 30, 300, 15, 2, 90, c_colorsAvailable[w32rand(6)]));
+		}
 		return true;
 	}
 
 	void SS2DDeInit() override {
-		for (auto r : m_road) {
-			RemoveShape(r, true);
+	}
+
+	MovingCircle* HitTestCircles(MovingCircle* bullet) {
+		for (auto c : m_circles) {
+			if (bullet->HitTestShape(c)) {
+				return c;
+			}
 		}
-		RemoveShape(&m_player);
-		m_road.clear();
+		return NULL;
 	}
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
-		// Delete road that goes off the bottom
-		for (auto it = m_road.begin(); it != m_road.end(); ) {
-			auto r = *it;
-			if (r->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
-				RemoveShape(r, true);
-				it = m_road.erase(it);
+		// Wrap any circles gone off the board
+		for (auto c : m_circles) {
+			if (c->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsright) {
+				c->OffsetPos(Point2F(-m_screenWidth, 0));
 			}
-			else {
+		}
+
+		// Bullet off top of screen?
+		if (m_playerBullet->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundstop) {
+			m_playerBullet->SetSpeed(0);
+		}
+
+		for (auto it = m_bullets.begin(); it != m_bullets.end(); ) {
+			auto bullet = *it;
+			auto circlehit = HitTestCircles(bullet);
+			if (circlehit) {
+				circlehit->SetSpeed(bullet->GetSpeed() / 2);
+				circlehit->SetDirectionInDeg(0);
+				Point2F posHit = circlehit->GetPos();
+				circlehit->OffsetPos(Point2F(0, -30));
+				m_bullets.push_front(circlehit);
+
+				auto it2 = std::find(m_circles.begin(), m_circles.end(), circlehit);
+				if (it2 != m_circles.end()) {
+					m_circles.erase(it2);
+				}
+
+				bullet->SetSpeed(0);
+				bullet->SetPos(posHit);
+				bullet->SetSpeed(2);
+				bullet->SetDirectionInDeg(90);
+				m_circles.push_back(bullet);
+				it = m_bullets.erase(it);
+				if (bullet == m_playerBullet) {
+					m_playerBullet = NewMovingCircle(430, 850, 15, 0, 0, c_colorsAvailable[w32rand(6)]);
+				}
+			}
+			else
 				++it;
-			}
 		}
 
 		// Move the player based on keys down
 		if (KeyDown(VK_RIGHT) && KeyDown(VK_LEFT)) {
-			m_player.SetSpeed(0);
+			m_player->SetSpeed(0);
 		}
 		else if (KeyDown(VK_RIGHT)) {
-			m_player.SetSpeed(5);
-			m_player.SetDirectionInDeg(90);
+			m_player->SetSpeed(m_playerMoveSpeed);
+			m_player->SetDirectionInDeg(90);
 		}
 		else if (KeyDown(VK_LEFT)) {
-			m_player.SetSpeed(5);
-			m_player.SetDirectionInDeg(270);
+			m_player->SetSpeed(m_playerMoveSpeed);
+			m_player->SetDirectionInDeg(270);
 		}
 		else {
-			m_player.SetSpeed(0);
+			m_player->SetSpeed(0);
 		}
 
-		// Did the player hit a road
-		for (auto r : m_road) {
-			if (r->HitTestShape(&m_player)) {
-				m_notifier.Notify(m_amQuit);	// QUIT
-			}
-		}
-
-		// Every timer tick, create new bit of road at the top
-		if (m_rdNewRoad.Elapsed(tick)) {
-			// Create new bit of road
-			MovingRectangle* left = new MovingRectangle(m_roadLeft, 0, 50, 50, m_speed, 180, RGB(255, 255, 255));
-			MovingRectangle* right = new MovingRectangle(m_roadLeft + m_roadWidth, 0, 50, 50, m_speed, 180, RGB(255, 255, 255));
-			QueueShape(left);
-			QueueShape(right);
-			m_road.push_back(left);
-			m_road.push_back(right);
-
-			m_roadLeft += w32rand(-50, 50);
-			m_speed += 0.08f;
-			m_rdNewRoad.AddTicks(-1);
-			for (auto r : m_road) {
-				r->SetSpeed(m_speed);
-			}
+		// If player bullet isn't moving, track the player
+		if (m_playerBullet->GetSpeed() == 0) {
+			auto pos = m_player->GetPos();
+			pos.x += 50;
+			m_playerBullet->SetPos(pos);
 		}
 
 		// Check for quit (Escape)
@@ -96,6 +123,11 @@ public:
 			if (ev.m_msg == WM_KEYDOWN) {
 				if (ev.m_wParam == VK_ESCAPE) {
 					m_notifier.Notify(m_amQuit);	// QUIT
+				}
+				else if (ev.m_wParam == VK_CONTROL) {	// fire
+					m_playerBullet->SetSpeed(20);
+					m_playerBullet->SetDirectionInDeg(0);
+					m_bullets.push_back(m_playerBullet);
 				}
 			}
 
@@ -106,16 +138,12 @@ public:
 	}
 
 protected:
-	MovingRectangle m_player;
 	Notifier& m_notifier;
 
-	FLOAT m_roadLeft;
-	FLOAT m_roadWidth;
-	FLOAT m_speed;
-
-	std::list<MovingRectangle*> m_road;
-
-	TickDelta m_rdNewRoad;
+	MovingRectangle* m_player;
+	MovingCircle* m_playerBullet;
+	std::list<MovingCircle*> m_circles;
+	std::list<MovingCircle*> m_bullets;
 
 public:
 	AppMessage m_amQuit;

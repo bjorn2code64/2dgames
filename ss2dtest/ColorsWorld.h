@@ -13,8 +13,6 @@
 class ColorsWorld : public SS2DWorld
 {
 public:
-	const w32Size c_screenSize = w32Size(c_screenWidth, c_screenHeight);	// 16 x 20 blocks
-
 	const std::vector<COLORREF> c_colorsAvailable = {
 		RGB(255, 0, 0),
 		RGB(0, 255, 0),
@@ -222,6 +220,7 @@ public:
 	ColorsWorld(Notifier& notifier) : 
 		m_notifier(notifier), 
 		m_fallingGroup(400.0f, 0.0f, c_fallingSpeed, 180) {
+		SS2DSetScreenSize(w32Size(c_screenWidth, c_screenHeight));
 	}
 
 	bool SS2DInit() override {
@@ -233,10 +232,6 @@ public:
 		RemoveShape(&m_fallingGroup);
 		m_fallingGroup.RemoveAllChildren(true);
 		m_board.Clear();
-	}
-
-	w32Size SS2DGetScreenSize() override {
-		return c_screenSize;
 	}
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
@@ -285,7 +280,7 @@ public:
 					m_notifier.Notify(m_amQuit);	// QUIT
 				}
 				else if (ev.m_wParam == VK_RIGHT) {	// Move right
-					if ((m_fallingGroup.GetPos().x < c_screenSize.cx - c_blockSize) &&
+					if ((m_fallingGroup.GetPos().x < SS2DGetScreenSize().cx - c_blockSize) &&
 						m_board.IsClear((int)(m_fallingGroup.GetPos().y / c_blockSize), (int)(m_fallingGroup.GetPos().x / c_blockSize + 1), 4))
 					{
 						m_fallingGroup.OffsetPos(Point2F((FLOAT)c_blockSize, 0));

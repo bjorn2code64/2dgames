@@ -4,7 +4,12 @@
 
 class TickDelta {
 public:
-	TickDelta(ULONGLONG periodMS, bool active = true) : m_periodMS(periodMS), m_active(active) {
+	TickDelta(ULONGLONG periodMS = 1000, bool active = true) : m_periodMS(periodMS), m_active(active) {
+		m_ullLast = GetTickCount64();
+	}
+
+	void SetPeriod(ULONGLONG periodMS) {
+		m_periodMS = periodMS;
 		m_ullLast = GetTickCount64();
 	}
 
@@ -20,8 +25,8 @@ public:
 	}
 
 	void SetActive(bool b) {
-		m_ullLast = GetTickCount64();
 		m_active = b;
+		m_ullLast = GetTickCount64();
 	}
 
 	void AddTicks(int ticks) {
@@ -44,7 +49,10 @@ protected:
 class SS2DWorld
 {
 public:
-	SS2DWorld() : m_colorBackground(D2D1::ColorF::Black) {
+	SS2DWorld() :
+		m_colorBackground(D2D1::ColorF::Black),
+		m_screenSize(1920, 1080)
+	{
 	}
 
 	~SS2DWorld() {
@@ -184,8 +192,12 @@ public:
 		return true;
 	}
 
-	virtual w32Size SS2DGetScreenSize() {
-		return w32Size(1920, 1080);
+	virtual w32Size& SS2DGetScreenSize() {
+		return m_screenSize;
+	}
+
+	void SS2DSetScreenSize(const w32Size& size) {
+		m_screenSize = size;
 	}
 
 protected:
@@ -201,6 +213,7 @@ protected:
 	std::vector<Shape*> m_shapes;
 	std::vector<std::pair<Shape*, bool>> m_shapesQueue;
 	std::queue<SS2DBitmap*> m_bitmapQueue;
+	w32Size m_screenSize;
 
 public:
 	D2D1::ColorF m_colorBackground;

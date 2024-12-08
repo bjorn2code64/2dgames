@@ -4,17 +4,10 @@
 
 class StarterWorld : public SS2DWorld
 {
-	const int m_screenWidth = 1920;
-	const int m_screenHeight = 1080;
-
 public:
 	StarterWorld(Notifier& notifier) :
 		m_notifier(notifier)
 	{
-	}
-
-	w32Size SS2DGetScreenSize() override {
-		return w32Size(m_screenWidth, m_screenHeight);
 	}
 
 	bool SS2DInit() override {

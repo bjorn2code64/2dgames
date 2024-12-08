@@ -77,16 +77,14 @@ public:
 		m_tdShipScore(2000, false),
 		m_tdHitBitmap(100, false)
 	{
+		SS2DSetScreenSize(w32Size(1000, 1080));
 	}
 
 	~InvaderWorld() {
 	}
 
-	w32Size SS2DGetScreenSize() override {
-		return w32Size(m_screenWidth, m_screenHeight);
-	}
-
 	bool SS2DInit() {
+
 		// Load bitmaps
 		m_bitmapOctopus[0] = NewResourceBitmap(L"octopusClosed.png");
 		m_bitmapOctopus[1] = NewResourceBitmap(L"octopusOpen.png");

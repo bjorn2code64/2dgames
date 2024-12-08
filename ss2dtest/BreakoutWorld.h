@@ -11,9 +11,6 @@ FLOAT LimitF(FLOAT x, FLOAT min, FLOAT max) {
 class BreakoutWorld : public SS2DWorld
 {
 protected:
-	const int m_screenWidth = 1920;
-	const int m_screenHeight = 1080;
-
 	// Bat properties
 	const FLOAT m_batStartWidth = 150.0f;
 	const FLOAT m_batHeight = 20.0f;
@@ -278,10 +275,10 @@ public:
 		// Move the bat to follow the mouse position
 		// Position the bat such that the middle is level with the mouse x position
 		FLOAT batX = mouse.x - batWidth / 2.0F;
-		m_bat.SetPos(Point2F(LimitF(batX, 0.0f, m_screenWidth - batWidth), 1000.0f));
+		m_bat.SetPos(Point2F(LimitF(batX, 0.0f, SS2DGetScreenSize().cx - batWidth), 1000.0f));
 		if (m_playerBullet.GetUserData() == 0) {
 			FLOAT bulletX = mouse.x - m_bulletWidth / 2.0F;
-			m_playerBullet.SetPos(Point2F(LimitF(bulletX, 0.0f, m_screenWidth - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
+			m_playerBullet.SetPos(Point2F(LimitF(bulletX, 0.0f, SS2DGetScreenSize().cx - m_bulletWidth), 1000.0f + m_batHeight - m_bulletHeight));
 		}
 		else {
 			if (m_playerBullet.WillHitBounds(SS2DGetScreenSize()) != Shape::moveResult::ok) {

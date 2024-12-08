@@ -5,17 +5,14 @@
 class MenuWorld : public SS2DWorld
 {
 public:
-	const int m_screenWidth = 1920;
-	const int m_screenHeight = 1080;
-
 	const int m_numShapes = 5000;
 	const float m_maxRadius = 60.0f;
 	const float m_minRadius = 10.0f;
 
 	const FLOAT menuPosX = 500.0f;
 	const FLOAT menuPosY = 200.0f;
-	const FLOAT menuWidth = m_screenWidth - (menuPosX * 2);
-	const FLOAT menuHeight = m_screenHeight - (menuPosY * 2);
+	const FLOAT menuWidth = SS2DGetScreenSize().cx - (menuPosX * 2);
+	const FLOAT menuHeight = SS2DGetScreenSize().cy - (menuPosY * 2);
 	const FLOAT menuTextHeight = 100;
 
 	MenuWorld(Notifier& notifier) :
@@ -25,10 +22,6 @@ public:
 	}
 
 	~MenuWorld() {
-	}
-
-	w32Size SS2DGetScreenSize() override {
-		return w32Size(m_screenWidth, m_screenHeight);
 	}
 
 	bool SS2DInit() override {
@@ -42,8 +35,8 @@ public:
 
 				m_movingShapes.push_back(
 				NewMovingRectangle(
-					w32randf(0, m_screenWidth - width),
-					w32randf(0, m_screenHeight - height),
+					w32randf(0, SS2DGetScreenSize().cx - width),
+					w32randf(0, SS2DGetScreenSize().cy - height),
 					width, height,
 					speed,
 					direction,
@@ -53,8 +46,8 @@ public:
 				float radius = w32randf(m_minRadius, m_maxRadius);
 
 				m_movingShapes.push_back(NewMovingCircle(
-					w32randf(radius, m_screenWidth - radius),
-					w32randf(radius, m_screenHeight - radius),
+					w32randf(radius, SS2DGetScreenSize().cx - radius),
+					w32randf(radius, SS2DGetScreenSize().cy - radius),
 					radius,
 					speed,
 					direction,
