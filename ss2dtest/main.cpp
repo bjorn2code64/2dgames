@@ -21,7 +21,6 @@ class MainWindow : public D2DWindow
 public:
 	MainWindow() :
 		D2DWindow(WINDOW_FLAGS_QUITONCLOSE),
-		m_pBrush(NULL),
 		m_windowSaver(APPNAME),
 		m_worldActive(&m_worldMenu),
 		m_worldMenu(m_notifier),
@@ -30,9 +29,6 @@ public:
 		m_worldColors(m_notifier),
 		m_worldTest(m_notifier)
 	{
-		srand((unsigned int)time(NULL));	// Stop random numbers being the same every time
-		w32seed();
-
 		AddExt(&m_windowSaver);	// Routes Windows messages to the window position saver so it can do it's thing
 	}
 
@@ -61,17 +57,13 @@ public:
 	}
 
 protected:
+	// Overrides from the engine. Pass them to the active world.
 	bool SS2DInit() override {
 		return m_worldActive->SS2DInit();
 	}
 
 	void SS2DDeInit() override {
 		m_worldActive->DeInit();
-	}
-
-	// Direct2D callbacks from the engine. Pass them to our world.
-	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override  {
-		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_pBrush);
 	}
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
@@ -88,15 +80,13 @@ protected:
 		// Draw the fixed aspect rectangle
 		RectF rectBounds;
 		D2DGetFARRect(&rectBounds);
-		pRenderTarget->DrawRectangle(rectBounds, m_pBrush);
+		pRenderTarget->DrawRectangle(rectBounds, *m_worldInvaders.GetDefaultBrush());
 
 		m_worldActive->D2DRender(pRenderTarget, m_shapeDrawFlags, &m_rsFAR);
 	}
 
 	void D2DOnDiscardResources() override {
 		m_worldActive->SS2DDiscardResources();
-
-		SafeRelease(&m_pBrush);
 	}
 
 	LRESULT WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override {
@@ -143,8 +133,8 @@ protected:
 	}
 
 protected:
-
 	MenuWorld m_worldMenu;
+
 	InvaderWorld m_worldInvaders;
 	BreakoutWorld m_worldBreakout;
 	ColorsWorld m_worldColors;
@@ -152,11 +142,9 @@ protected:
 
 	SS2DWorld* m_worldActive;
 
-	ID2D1SolidColorBrush* m_pBrush;	// Fixed aspect outline brush - white
-
 	WindowSaverExt m_windowSaver;	// Save the screen position between runs
 
-	Notifier m_notifier;
+	Notifier m_notifier;	// Notifications between the menu and the games
 };
 
 ////////////////////////////////////////////////////////////////////////////////

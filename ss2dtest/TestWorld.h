@@ -105,7 +105,7 @@ public:
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
 		// Wrap any circles gone off the board
-		RectF hit(-30.0f, 0, SS2DGetScreenSize().cx + 60.0f, SS2DGetScreenSize().cy);
+		RectF hit(-30.0f, 0, SS2DGetScreenSize().cx + 60.0f, (FLOAT)SS2DGetScreenSize().cy);
 		for (auto c : m_circles) {
 			auto hitResult = c->WillHitBounds(hit);
 

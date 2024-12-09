@@ -20,7 +20,7 @@
 class Window : public WindowExtHost
 {
 public:
-	static void LibInit(HINSTANCE h) { m_hInstance = h; }
+	static void LibInit(HINSTANCE h) { m_hInstance = h;		w32seed();	}
 
 	Window(WORD wFlags = 0, Window* parent = NULL) : m_hWnd(NULL), m_wFlags(wFlags), m_parent(parent) {}
 

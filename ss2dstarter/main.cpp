@@ -18,9 +18,6 @@ public:
 		D2DWindow(WINDOW_FLAGS_QUITONCLOSE),
 		m_windowSaver(APPNAME)
 	{
-		srand((unsigned int)time(NULL));	// Stop random numbers being the same every time
-		w32seed();
-
 		AddExt(&m_windowSaver);	// Routes Windows messages to the window position saver so it can do it's thing
 	}
 
@@ -85,6 +82,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow)
 {
 	int ret = 0;
+
 	if (SUCCEEDED(CoInitialize(NULL))) {
 		Window::LibInit(hInstance);	// Initialise the library
 
