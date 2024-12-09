@@ -23,15 +23,15 @@ public:
 		if (pRS)	pRS->ScaleNoOffset(&r);
 		e.radiusX = e.radiusY = r;
 
-		pRenderTarget->FillEllipse(&e, GetBrush());
+		pRenderTarget->FillEllipse(&e, *GetBrush());
 		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
 		p->left = pos.x - m_fRadius;
-		p->right = pos.x + m_fRadius;
+		p->right = pos.x + m_fRadius - 1;
 		p->top = pos.y - m_fRadius;
-		p->bottom = pos.y + m_fRadius;
+		p->bottom = pos.y + m_fRadius - 1;
 	}
 
 	// Some bounce code for rectangle - sides and corners. Not quite right but close.
@@ -114,6 +114,12 @@ public:
 		return false;
 	}
 
+	bool HitTestShape(MovingCircle* rhs) {
+		Point2F posMe = GetPos();
+		Point2F posYou = rhs->GetPos();
+		return posMe.DistanceToSq(posYou) <= m_fRadius * m_fRadius * 4;
+	}
+
 protected:
 	void BounceOffPoint(const Point2F& pt) {
 		// Gradient between pt and direction
@@ -185,7 +191,7 @@ public:
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		pRenderTarget->FillRectangle(&r, GetBrush());
+		pRenderTarget->FillRectangle(&r, *GetBrush());
 		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
 
@@ -233,7 +239,7 @@ public:
 		r.bottom = pos.y + fHeight;
 		m_bitmap->Render(pRenderTarget, r, m_alpha);
 		if (dwFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS) {
-			pRenderTarget->DrawRectangle(&r, GetBrush());
+			pRenderTarget->DrawRectangle(&r, *GetBrush());
 		}
 		__super::Draw(pRenderTarget, dwFlags, pRS);
 	}
@@ -407,9 +413,14 @@ public:
 			r.right = pos.x + fWidth;
 			r.top = pos.y;
 			r.bottom = pos.y + fHeight;
-			pRenderTarget->DrawRectangle(&r, GetBrush());
+			pRenderTarget->DrawRectangle(&r, *GetBrush());
 		}
 		Shape::Draw(pRenderTarget, dwFlags, pRS);
+	}
+
+	moveResult WillHitBounds(const RectF& rBounds) {
+		UpdateBounds();
+		return __super::WillHitBounds(rBounds, GetPos());
 	}
 
 	moveResult WillHitBounds(const w32Size& screenSize) {

@@ -214,7 +214,8 @@ public:
 	virtual void SS2DDiscardResources() {
 	}
 
-	ID2D1SolidColorBrush* GetBrush() { return *m_pBrush; }
+	void SetBrush(SS2DBrush* b) { m_pBrush = b;  }
+	SS2DBrush* GetBrush() { return m_pBrush; }
 	COLORREF GetBrushColor() { return m_pBrush ? m_pBrush->GetColor() : 0; }
 
 	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) {
@@ -232,22 +233,30 @@ public:
 
 	// Lookahead WillHitBounds() for checking collision with screen edges.
 	virtual moveResult WillHitBounds(const w32Size& screenSize) {
-		return WillHitBounds(screenSize, GetPos());
+		return WillHitBounds(RectF(0, 0, (FLOAT)screenSize.cx, (FLOAT)screenSize.cy), GetPos());
 	}
 
 	virtual moveResult WillHitBounds(const w32Size& screenSize, const Point2F& pos) {
+		return WillHitBounds(RectF(0, 0, (FLOAT)screenSize.cx, (FLOAT)screenSize.cy), pos);
+	}
+
+	virtual moveResult WillHitBounds(const RectF& rBounds) {
+		return WillHitBounds(rBounds, GetPos());
+	}
+
+	virtual moveResult WillHitBounds(const RectF& rBounds, const Point2F& pos) {
 		Point2F posCurr = pos;
 		MovePos(posCurr);
 		RectF r;
 		GetBoundingBox(&r, posCurr);
 
-		if (r.left < 0)					return moveResult::hitboundsleft;
-		if (r.right >= screenSize.cx)	return moveResult::hitboundsright;
-		if (r.top < 0)					return moveResult::hitboundstop;
-		if (r.bottom >= screenSize.cy)	return moveResult::hitboundsbottom;
+		if (r.left < rBounds.left)			return moveResult::hitboundsleft;
+		if (r.right >= rBounds.right)		return moveResult::hitboundsright;
+		if (r.top < rBounds.top)			return moveResult::hitboundstop;
+		if (r.bottom >= rBounds.bottom)		return moveResult::hitboundsbottom;
 
 		for (auto& c : m_children) {
-			auto ret = c->WillHitBounds(screenSize);
+			auto ret = c->WillHitBounds(rBounds);
 			if (ret != moveResult::ok)
 				return ret;
 		}

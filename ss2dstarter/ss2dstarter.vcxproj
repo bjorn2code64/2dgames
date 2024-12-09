@@ -21,10 +21,10 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ss2dtest</RootNamespace>
+    <RootNamespace>ss2dstarter</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectGuid>{F538390F-DF5D-4495-A248-7AD95B565F30}</ProjectGuid>
-    <ProjectName>ss2dtest</ProjectName>
+    <ProjectName>ss2dstarter</ProjectName>
+    <ProjectGuid>{127F3B85-B87C-410A-9599-65DD46B5C357}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -208,11 +208,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MenuWorld.h" />
-    <ClInclude Include="BreakoutWorld.h" />
-    <ClInclude Include="ColorsWorld.h" />
-    <ClInclude Include="InvaderWorld.h" />
-    <ClInclude Include="TestWorld.h" />
+    <ClInclude Include="StarterWorld.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\runtime\batlarger.png" />

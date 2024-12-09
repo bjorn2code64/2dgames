@@ -102,13 +102,13 @@ public:
 		m_textScore = NewMovingText(L"", 0.0f, m_textHeight * 1.5f, 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushGreen);
 		m_textScoreLabel = NewMovingText(L"Score", 0.0f, m_textHeight * 0.5f, 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushGreen);
 		m_textShipScore = NewMovingText(L"100", 0.0f, 0.0f, m_shipWidth, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushPurple, 1.0, 0, false);
-		m_textGameOver = NewMovingText(L"Game Over", 0.0f, m_screenHeight / 2.0F, (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushWhite, 1.0, 0, false);
+		m_textGameOver = NewMovingText(L"Game Over", 0.0f, m_screenHeight / 2.0F, (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush(), 1.0, 0, false);
 
 		// Initialise Game Variables
 		m_score = 0;
 		m_livesRemaining = m_playerLives;
-		m_player = NewMovingRectangle(m_playerStart.x, m_playerStart.y, m_playerWidth, m_playerHeight, 0, 0, m_brushWhite);
-		m_playerBullet = NewMovingRectangle(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_brushWhite);
+		m_player = NewMovingRectangle(m_playerStart.x, m_playerStart.y, m_playerWidth, m_playerHeight, 0, 0, GetDefaultBrush());
+		m_playerBullet = NewMovingRectangle(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, GetDefaultBrush());
 
 		m_frame = 0;
 		m_invadersBulletChance = m_invadersBulletChanceStart;
@@ -230,8 +230,8 @@ protected:
 		for (int i = 0; i < m_playerLives - 1; i++) {
 			FLOAT piHeight = m_playerHeight * m_playerIndicatorSize;
 			FLOAT piWidth = m_playerWidth * m_playerIndicatorSize;
-			auto life = NewMovingRectangle(playerLifePt.x, playerLifePt.y, piWidth, piHeight, 0, 0, m_brushWhite);
-			auto bullet = NewMovingRectangle(0, 0, m_bulletWidth * m_playerIndicatorSize, m_bulletHeight * m_playerIndicatorSize, 0, 0, m_brushWhite);
+			auto life = NewMovingRectangle(playerLifePt.x, playerLifePt.y, piWidth, piHeight, 0, 0, GetDefaultBrush());
+			auto bullet = NewMovingRectangle(0, 0, m_bulletWidth * m_playerIndicatorSize, m_bulletHeight * m_playerIndicatorSize, 0, 0, GetDefaultBrush());
 
 			auto pos = life->GetPos();
 			pos += Point2F((piWidth - m_bulletWidth) / 2.0f, -piHeight / 2.0f);
@@ -441,7 +441,7 @@ protected:
 				ptBullet.x += (m_invaderWidth - m_bulletWidth) / 2;
 
 				MovingRectangle* bullet = NewMovingRectangle(
-					ptBullet.x, ptBullet.y, m_bulletWidth, m_bulletHeight, m_invaderbulletSpeed, 180, m_brushWhite
+					ptBullet.x, ptBullet.y, m_bulletWidth, m_bulletHeight, m_invaderbulletSpeed, 180, GetDefaultBrush()
 				);
 
 				m_invaderBullets.push_back(bullet);

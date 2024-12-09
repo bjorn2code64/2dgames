@@ -63,7 +63,6 @@ public:
 		AddMenuItem(L"Breakout", RGB(128, 0, 0), RGB(255, 0, 0), m_amRunBreakout, 60);
 		AddMenuItem(L"Colors", RGB(0, 0, 128), RGB(0, 0, 255), m_amRunColors, 5);
 		AddMenuItem(L"Test", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunTest, 5);
-		AddMenuItem(L"Starter", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunStarter, 5);
 		AddMenuItem(L"Exit", RGB(128, 128, 128), RGB(255, 255, 255), m_amQuit, 0);
 
 		return true;
@@ -168,6 +167,5 @@ public:
 	AppMessage m_amRunBreakout;
 	AppMessage m_amRunColors;
 	AppMessage m_amRunTest;
-	AppMessage m_amRunStarter;
 	AppMessage m_amQuit;
 };

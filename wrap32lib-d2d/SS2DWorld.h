@@ -54,7 +54,7 @@ public:
 		m_colorBackground(D2D1::ColorF::Black),
 		m_screenSize(1920, 1080)
 	{
-		m_brushWhite = NewResourceBrush(RGB(255, 255, 255));
+		m_brushDefault = NewResourceBrush(RGB(255, 255, 255));
 	}
 
 	~SS2DWorld() {
@@ -224,6 +224,8 @@ public:
 		m_screenSize = size;
 	}
 
+	SS2DBrush* GetDefaultBrush() { return m_brushDefault;  }
+
 protected:
 	int KeyDown(int keycode) {
 		return ::GetAsyncKeyState(keycode) & 0x8000;
@@ -240,7 +242,7 @@ protected:
 	std::queue<SS2DBitmap*> m_bitmapQueue;
 	std::queue<SS2DBrush*> m_brushQueue;
 	w32Size m_screenSize;
-	SS2DBrush* m_brushWhite;
+	SS2DBrush* m_brushDefault;	// White brush
 
 public:
 	D2D1::ColorF m_colorBackground;

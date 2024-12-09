@@ -185,12 +185,12 @@ public:
 		m_bitmapShooter = NewResourceBitmap(L"shooter.png");
 		m_bitmapBatLarger = NewResourceBitmap(L"batlarger.png");
 
-		m_bat = NewMovingRectangle(0, 0, m_batStartWidth, m_batHeight, 0, 0, m_brushWhite);
+		m_bat = NewMovingRectangle(0, 0, m_batStartWidth, m_batHeight, 0, 0, GetDefaultBrush());
 		m_countdownShooter = NewMovingRectangle(400, 1030, 100.0F, 20.0f, 0.0f, 0, m_brushRed);
 		m_playerBullet = NewMovingRectangle(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_brushRed, 1.0, 0, false);
 
-		m_textScoreLabel = NewMovingText(L"Score:", 10, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushWhite);
-		m_textScore = NewMovingText(L"0", 50, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, m_brushWhite);
+		m_textScoreLabel = NewMovingText(L"Score:", 10, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush());
+		m_textScore = NewMovingText(L"0", 50, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, GetDefaultBrush());
 
 		m_tdBatLarger.SetPeriod(batLargerTime, false);
 		m_tdBallFaster.SetPeriod(ballFasterTime, false);
@@ -201,7 +201,7 @@ public:
 		m_score = 0;
 		m_textScore->SetText(std::to_wstring(m_score).c_str());
 
-		m_balls.push_back(NewMovingCircle(200.0f, 600.0f, m_ballRadius, m_ballStartSpeed, 135, m_brushWhite));
+		m_balls.push_back(NewMovingCircle(200.0f, 600.0f, m_ballRadius, m_ballStartSpeed, 135, GetDefaultBrush()));
 
 		GenerateBricks();
 
@@ -469,9 +469,9 @@ public:
 						int direction = pBall->GetDirectionInDeg();
 
 						// Add two more balls at this position
-						MovingCircle* pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction + 2, m_brushWhite);
+						MovingCircle* pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction + 2, GetDefaultBrush());
 						newBalls.push_back(pBallNew);
-						pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction - 2, m_brushWhite);
+						pBallNew = new MovingCircle(pos.x, pos.y, m_ballRadius, m_ballStartSpeed, direction - 2, GetDefaultBrush());
 						newBalls.push_back(pBallNew);
 					}
 
