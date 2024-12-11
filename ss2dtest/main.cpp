@@ -10,7 +10,7 @@
 #include "InvaderWorld.h"
 #include "BreakoutWorld.h"
 #include "ColorsWorld.h"
-#include "TestWorld.h"
+#include "BaublesWorld.h"
 
 #define APPNAME L"w32ld2d"
 
@@ -21,13 +21,14 @@ class MainWindow : public D2DWindow
 public:
 	MainWindow() :
 		D2DWindow(WINDOW_FLAGS_QUITONCLOSE),
+		m_pBrush(NULL),
 		m_windowSaver(APPNAME),
 		m_worldActive(&m_worldMenu),
 		m_worldMenu(m_notifier),
 		m_worldInvaders(m_notifier),
 		m_worldBreakout(m_notifier),
 		m_worldColors(m_notifier),
-		m_worldTest(m_notifier)
+		m_worldBaubles(m_notifier)
 	{
 		AddExt(&m_windowSaver);	// Routes Windows messages to the window position saver so it can do it's thing
 	}
@@ -50,7 +51,7 @@ public:
 		m_notifier.AddNotifyTarget(this, m_worldInvaders.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldBreakout.m_amQuit);
 		m_notifier.AddNotifyTarget(this, m_worldColors.m_amQuit);
-		m_notifier.AddNotifyTarget(this, m_worldTest.m_amQuit);
+		m_notifier.AddNotifyTarget(this, m_worldBaubles.m_amQuit);
 
 		Show(nCmdShow);
 		return ERROR_SUCCESS;
@@ -64,6 +65,12 @@ protected:
 
 	void SS2DDeInit() override {
 		m_worldActive->DeInit();
+	}
+
+	// Direct2D callbacks from the engine. Pass them to our world.
+	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
+		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_pBrush);
+		m_worldActive->SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory);
 	}
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
@@ -80,13 +87,15 @@ protected:
 		// Draw the fixed aspect rectangle
 		RectF rectBounds;
 		D2DGetFARRect(&rectBounds);
-		pRenderTarget->DrawRectangle(rectBounds, *m_worldInvaders.GetDefaultBrush());
+		pRenderTarget->DrawRectangle(rectBounds, m_pBrush);
 
 		m_worldActive->D2DRender(pRenderTarget, m_shapeDrawFlags, &m_rsFAR);
 	}
 
 	void D2DOnDiscardResources() override {
 		m_worldActive->SS2DDiscardResources();
+
+		SafeRelease(&m_pBrush);
 	}
 
 	LRESULT WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override {
@@ -111,13 +120,13 @@ protected:
 		else if (message == m_worldMenu.m_amRunTest) {
 			// Disable the menu world and start Test world
 			Stop();
-			m_worldActive = &m_worldTest;
+			m_worldActive = &m_worldBaubles;
 			D2DWindow::Init(m_worldActive->SS2DGetScreenSize());	// Intialise our d2d engine
 		}
 		else if ((message == m_worldInvaders.m_amQuit) ||
 			(message == m_worldBreakout.m_amQuit) ||
 			(message == m_worldColors.m_amQuit) ||
-			(message == m_worldTest.m_amQuit)
+			(message == m_worldBaubles.m_amQuit)
 			) {
 			// Disable the game world and start menu world
 			Stop();
@@ -138,9 +147,11 @@ protected:
 	InvaderWorld m_worldInvaders;
 	BreakoutWorld m_worldBreakout;
 	ColorsWorld m_worldColors;
-	TestWorld m_worldTest;
+	BaublesWorld m_worldBaubles;
 
 	SS2DWorld* m_worldActive;
+
+	ID2D1SolidColorBrush* m_pBrush;	// Fixed aspect outline brush - white
 
 	WindowSaverExt m_windowSaver;	// Save the screen position between runs
 

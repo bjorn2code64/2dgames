@@ -12,46 +12,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\runtime\batlarger.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\bitmap1.bmp">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\crabClosed.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\crabOpen.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\multiball.png">
-      <Filter>Resources</Filter>
-    </Image>
     <Image Include="..\runtime\octopusClosed.png">
       <Filter>Resources</Filter>
     </Image>
-    <Image Include="..\runtime\octopusOpen.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\shooter.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\squidClosed.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\squidOpen.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\UFO.png">
-      <Filter>Resources</Filter>
-    </Image>
-    <Image Include="..\runtime\invaderGone.png">
-      <Filter>Resources</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\runtime\level1.txt">
-      <Filter>Resources</Filter>
-    </Text>
   </ItemGroup>
 </Project>

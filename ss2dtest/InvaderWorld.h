@@ -101,8 +101,8 @@ public:
 		// Create texts
 		m_textScore = NewMovingText(L"", 0.0f, m_textHeight * 1.5f, 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushGreen);
 		m_textScoreLabel = NewMovingText(L"Score", 0.0f, m_textHeight * 0.5f, 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushGreen);
-		m_textShipScore = NewMovingText(L"100", 0.0f, 0.0f, m_shipWidth, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushPurple, 1.0, 0, false);
-		m_textGameOver = NewMovingText(L"Game Over", 0.0f, m_screenHeight / 2.0F, (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush(), 1.0, 0, false);
+		m_textShipScore = NewMovingText(L"100", 0.0f, 0.0f, m_shipWidth, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushPurple, 0, false);
+		m_textGameOver = NewMovingText(L"Game Over", 0.0f, m_screenHeight / 2.0F, (FLOAT)m_screenWidth, (FLOAT)m_screenHeight / 10.0F, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush(), 0, false);
 
 		// Initialise Game Variables
 		m_score = 0;

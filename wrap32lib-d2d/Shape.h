@@ -53,9 +53,8 @@ Vector2F reflect(const Vector2F& direction, const Vector2F& normal) {
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Shape class manages position, direction, speed, color and
-// alphablending using a solid brush and holds userdata and active
-// status.
+// Shape class manages position, direction, speed and holds userdata,
+// active status and an association to a brush.
 // Also has prototype functions for simple HitTesting.
 // Shapes can be organised in a parent -> multiple child heirarchy.
 //
@@ -80,8 +79,8 @@ public:
 		hitboundsbottom
 	};
 
-	Shape(FLOAT x, FLOAT y, FLOAT speed, int direction, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_pos(x, y), m_fSpeed(speed), m_parent(NULL), m_pBrush(brush), m_alpha(alpha), m_userdata(userdata), m_active(true),
+	Shape(FLOAT x, FLOAT y, FLOAT speed, int direction, SS2DBrush* brush, LPARAM userdata = 0) :
+		m_pos(x, y), m_fSpeed(speed), m_parent(NULL), m_pBrush(brush), m_userdata(userdata), m_active(true),
 		m_childHasMoved(true)
 	{
 		SetDirectionInDeg(direction);
@@ -192,9 +191,6 @@ public:
 		m_direction += f;
 		UpdateCache();
 	}
-
-	void SetAlpha(FLOAT alpha) { m_alpha = alpha; }
-	FLOAT GetAlpha() { return m_alpha; }
 
 	void SetUserData(LPARAM l) { m_userdata = l; }
 	LPARAM GetUserData() { return m_userdata; }
@@ -338,7 +334,6 @@ protected:
 
 	// Colour
 	SS2DBrush* m_pBrush;
-	FLOAT m_alpha;
 
 	// Is it drawn?
 	bool m_active;

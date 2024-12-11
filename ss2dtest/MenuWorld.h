@@ -57,12 +57,12 @@ public:
 
 		m_brushMenu = NewResourceBrush(RGB(255, 255, 255), 0.8f);
 
-		m_menuBackground = NewMovingRectangle(menuPosX, menuPosY, menuWidth, menuHeight, 0.0f, 0, m_brushMenu, 0.8f);
+		m_menuBackground = NewMovingRectangle(menuPosX, menuPosY, menuWidth, menuHeight, 0.0f, 0, m_brushMenu);
 
 		AddMenuItem(L"Invaders", RGB(0, 128, 0), RGB(0, 255, 0), m_amRunInvaders, 95);
 		AddMenuItem(L"Breakout", RGB(128, 0, 0), RGB(255, 0, 0), m_amRunBreakout, 60);
 		AddMenuItem(L"Colors", RGB(0, 0, 128), RGB(0, 0, 255), m_amRunColors, 5);
-		AddMenuItem(L"Test", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunTest, 5);
+		AddMenuItem(L"Bauble Blast!", RGB(128, 0, 128), RGB(255, 0, 255), m_amRunTest, 5);
 		AddMenuItem(L"Exit", RGB(128, 128, 128), RGB(255, 255, 255), m_amQuit, 0);
 
 		return true;

@@ -5,8 +5,8 @@
 class MovingCircle : public Shape
 {
 public:
-	MovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		Shape(x, y, speed, dir, brush, alpha, userdata), m_fRadius(radius) {}
+	MovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, LPARAM userdata = 0) :
+		Shape(x, y, speed, dir, brush, userdata), m_fRadius(radius) {}
 
 	bool HitTest(Point2F pos) override {
 		float distSq = (pos.x - m_pos.x) * (pos.x - m_pos.x) +
@@ -161,8 +161,8 @@ protected:
 class MovingRectangle : public Shape
 {
 public:
-	MovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		Shape(x, y, speed, dir, brush, alpha, userdata), m_fWidth(width), m_fHeight(height)
+	MovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, LPARAM userdata = 0) :
+		Shape(x, y, speed, dir, brush, userdata), m_fWidth(width), m_fHeight(height)
 	{
 	}
 
@@ -214,8 +214,8 @@ protected:
 class MovingBitmap : public Shape
 {
 public:
-	MovingBitmap(SS2DBitmap* bitmap, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
-		m_bitmap(bitmap), Shape(x, y, speed, dir, 0, alpha, userdata), m_fWidth(width), m_fHeight(height) {
+	MovingBitmap(SS2DBitmap* bitmap, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT opacity = 1.0f, LPARAM userdata = 0) :
+		m_bitmap(bitmap), Shape(x, y, speed, dir, 0, userdata), m_fWidth(width), m_fHeight(height), m_opacity(opacity) {
 	}
 
 	void SetBitmap(SS2DBitmap* bitmap) {
@@ -237,7 +237,7 @@ public:
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		m_bitmap->Render(pRenderTarget, r, m_alpha);
+		m_bitmap->Render(pRenderTarget, r, m_opacity);
 		if (dwFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS) {
 			pRenderTarget->DrawRectangle(&r, *GetBrush());
 		}
@@ -254,14 +254,15 @@ public:
 protected:
 	FLOAT m_fWidth;
 	FLOAT m_fHeight;
+	FLOAT m_opacity;
 	SS2DBitmap* m_bitmap;
 };
 
 class MovingText : public Shape {
 public:
-	MovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0) :
+	MovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, SS2DBrush* brush, LPARAM userdata = 0) :
 		m_text(wsz),
-		Shape(x, y, speed, dir, brush, alpha, userdata),
+		Shape(x, y, speed, dir, brush, userdata),
 		m_fWidth(width), m_fHeight(height),
 		m_pWTF(NULL),
 		m_ta(ta)
@@ -334,23 +335,29 @@ class MovingGroup : public MovingRectangle {
 public:
 	// Set width/height to !0 to debug where the shape is
 	MovingGroup() :
-		MovingRectangle(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0, NULL, 1.0F, 0)
+		MovingRectangle(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0, NULL, 0)
 	{
 	}
 
 	MovingGroup(FLOAT x, FLOAT y, FLOAT speed, int dir, LPARAM userdata = 0) :
-		MovingRectangle(x, y, 0.0f, 0.0f, speed, dir, NULL, 1.0F, userdata)
+		MovingRectangle(x, y, 0.0f, 0.0f, speed, dir, NULL, userdata)
 	{
 	}
 
-	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, brush, alpha, userdata);
+	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, LPARAM userdata = 0, bool active = true) {
+		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, brush, userdata);
 		AddChild(p);
 		return p;
 	}
 
-	MovingBitmap* NewMovingBitmap(SS2DBitmap* bmp, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingBitmap* p = new MovingBitmap(bmp, x, y, width, height, speed, dir, alpha, userdata);
+	MovingBitmap* NewMovingBitmap(SS2DBitmap* bmp, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT opacity = 1.0f, LPARAM userdata = 0, bool active = true) {
+		MovingBitmap* p = new MovingBitmap(bmp, x, y, width, height, speed, dir, opacity, userdata);
+		AddChild(p);
+		return p;
+	}
+
+	MovingCircle* NewMovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, LPARAM userdata = 0, bool active = true) {
+		MovingCircle* p = new MovingCircle(x, y, radius, speed, dir, brush, userdata);
 		AddChild(p);
 		return p;
 	}

@@ -54,10 +54,29 @@ public:
 		m_colorBackground(D2D1::ColorF::Black),
 		m_screenSize(1920, 1080)
 	{
-		m_brushDefault = NewResourceBrush(RGB(255, 255, 255));
+		m_brushDefault = new SS2DBrush(RGB(255, 255, 255));
 	}
 
 	~SS2DWorld() {
+	}
+
+	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory)
+	{
+		m_brushDefault->Create(pRenderTarget);
+		m_brushes.push_back(m_brushDefault);
+
+		while (!m_brushQueue.empty()) {
+			auto p = m_brushQueue.front();
+			p->Create(pRenderTarget);
+			m_brushes.push_back(p);
+			m_brushQueue.pop();
+		}
+
+		while (!m_bitmapQueue.empty()) {
+			auto p = m_bitmapQueue.front();
+			p->LoadFromFile(pRenderTarget, pIWICFactory);
+			m_bitmapQueue.pop();
+		}
 	}
 
 	virtual bool SS2DDiscardResources() {
@@ -85,26 +104,26 @@ public:
 		return p;
 	}
 
-	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, brush, alpha, userdata);
+	MovingRectangle* NewMovingRectangle(FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, SS2DBrush* brush, LPARAM userdata = 0, bool active = true) {
+		MovingRectangle* p = new MovingRectangle(x, y, width, height, speed, dir, brush, userdata);
 		QueueShape(p, active);
 		return p;
 	}
 
-	MovingCircle* NewMovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingCircle* p = new MovingCircle(x, y, radius, speed, dir, brush, alpha, userdata);
+	MovingCircle* NewMovingCircle(FLOAT x, FLOAT y, FLOAT radius, FLOAT speed, int dir, SS2DBrush* brush, LPARAM userdata = 0, bool active = true) {
+		MovingCircle* p = new MovingCircle(x, y, radius, speed, dir, brush, userdata);
 		QueueShape(p, active);
 		return p;
 	}
 
-	MovingBitmap* NewMovingBitmap(SS2DBitmap* bitmap, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingBitmap* p = new MovingBitmap(bitmap, x, y, width, height, speed, dir, alpha, userdata);
+	MovingBitmap* NewMovingBitmap(SS2DBitmap* bitmap, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, FLOAT opacity = 1.0F, LPARAM userdata = 0, bool active = true) {
+		MovingBitmap* p = new MovingBitmap(bitmap, x, y, width, height, speed, dir, opacity, userdata);
 		QueueShape(p, active);
 		return p;
 	}
 
-	MovingText* NewMovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, SS2DBrush* brush, FLOAT alpha = 1.0F, LPARAM userdata = 0, bool active = true) {
-		MovingText* p = new MovingText(wsz, x, y, width, height, speed, dir, ta, brush, alpha, userdata);
+	MovingText* NewMovingText(LPCWSTR wsz, FLOAT x, FLOAT y, FLOAT width, FLOAT height, FLOAT speed, int dir, DWRITE_TEXT_ALIGNMENT ta, SS2DBrush* brush, LPARAM userdata = 0, bool active = true) {
+		MovingText* p = new MovingText(wsz, x, y, width, height, speed, dir, ta, brush, userdata);
 		QueueShape(p, active);
 		return p;
 	}
@@ -155,19 +174,6 @@ public:
 	}
 
 	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
-		while (!m_brushQueue.empty()) {
-			auto p = m_brushQueue.front();
-			p->Create(pRenderTarget);
-			m_brushes.push_back(p);
-			m_brushQueue.pop();
-		}
-
-		while (!m_bitmapQueue.empty()) {
-			auto p = m_bitmapQueue.front();
-			p->LoadFromFile(pRenderTarget, pIWICFactory);
-			m_bitmapQueue.pop();
-		}
-
 		// Now is the time to add queued shapes to the engine.
 		for (auto p : m_shapesQueue) {
 			AddShape(p.first, pDWriteFactory, pRenderTarget, pIWICFactory, pRS, p.second);

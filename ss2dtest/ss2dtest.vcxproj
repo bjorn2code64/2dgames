@@ -212,7 +212,7 @@
     <ClInclude Include="BreakoutWorld.h" />
     <ClInclude Include="ColorsWorld.h" />
     <ClInclude Include="InvaderWorld.h" />
-    <ClInclude Include="TestWorld.h" />
+    <ClInclude Include="BaublesWorld.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\runtime\batlarger.png" />

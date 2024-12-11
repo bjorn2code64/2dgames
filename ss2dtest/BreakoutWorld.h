@@ -187,7 +187,7 @@ public:
 
 		m_bat = NewMovingRectangle(0, 0, m_batStartWidth, m_batHeight, 0, 0, GetDefaultBrush());
 		m_countdownShooter = NewMovingRectangle(400, 1030, 100.0F, 20.0f, 0.0f, 0, m_brushRed);
-		m_playerBullet = NewMovingRectangle(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_brushRed, 1.0, 0, false);
+		m_playerBullet = NewMovingRectangle(0, 0, m_bulletWidth, m_bulletHeight, 0, 0, m_brushRed, 0, false);
 
 		m_textScoreLabel = NewMovingText(L"Score:", 10, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush());
 		m_textScore = NewMovingText(L"0", 50, 1030, 200.0f, 20.0f, 0, 0, DWRITE_TEXT_ALIGNMENT_TRAILING, GetDefaultBrush());
