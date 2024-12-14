@@ -117,7 +117,8 @@ public:
 	bool HitTestShape(MovingCircle* rhs) {
 		Point2F posMe = GetPos();
 		Point2F posYou = rhs->GetPos();
-		return posMe.DistanceToSq(posYou) <= m_fRadius * m_fRadius * 4;
+		FLOAT radiusSum = m_fRadius + rhs->m_fRadius;
+		return posMe.DistanceToSq(posYou) <= radiusSum * radiusSum;
 	}
 
 protected:
@@ -291,6 +292,11 @@ public:
 	void SS2DDiscardResources() override {
 		SafeRelease(&m_pWTF);
 		__super::SS2DDiscardResources();
+	}
+
+	void SS2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) override {
+		SS2DDiscardResources();	// destroy the text so it gets recreated at the correct size next frame
+		SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
 	}
 
 	void SetText(LPCWSTR wsz) {

@@ -210,6 +210,9 @@ public:
 	virtual void SS2DDiscardResources() {
 	}
 
+	virtual void SS2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) {
+	}
+
 	void SetBrush(SS2DBrush* b) { m_pBrush = b;  }
 	SS2DBrush* GetBrush() { return m_pBrush; }
 	COLORREF GetBrushColor() { return m_pBrush ? m_pBrush->GetColor() : 0; }

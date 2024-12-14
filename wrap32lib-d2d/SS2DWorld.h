@@ -52,7 +52,8 @@ class SS2DWorld
 public:
 	SS2DWorld() :
 		m_colorBackground(D2D1::ColorF::Black),
-		m_screenSize(1920, 1080)
+		m_screenSize(1920, 1080),
+		m_resizeHappened(false)
 	{
 		m_brushDefault = new SS2DBrush(RGB(255, 255, 255));
 	}
@@ -60,8 +61,7 @@ public:
 	~SS2DWorld() {
 	}
 
-	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory)
-	{
+	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {
 		m_brushDefault->Create(pRenderTarget);
 		m_brushes.push_back(m_brushDefault);
 
@@ -90,6 +90,10 @@ public:
 		}
 		m_brushes.clear();
 		return true;
+	}
+
+	void SS2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) {
+		m_resizeHappened = true;
 	}
 
 	SS2DBrush* NewResourceBrush(COLORREF cr, FLOAT alpha = 1.0) {
@@ -174,6 +178,12 @@ public:
 	}
 
 	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
+		if (m_resizeHappened) {
+			for (auto s : m_shapes) {
+				s->SS2DOnResize(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+			}
+		}
+
 		// Now is the time to add queued shapes to the engine.
 		for (auto p : m_shapesQueue) {
 			AddShape(p.first, pDWriteFactory, pRenderTarget, pIWICFactory, pRS, p.second);
@@ -249,6 +259,7 @@ protected:
 	std::queue<SS2DBrush*> m_brushQueue;
 	w32Size m_screenSize;
 	SS2DBrush* m_brushDefault;	// White brush
+	bool m_resizeHappened;
 
 public:
 	D2D1::ColorF m_colorBackground;

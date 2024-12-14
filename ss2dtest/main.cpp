@@ -92,6 +92,10 @@ protected:
 		m_worldActive->D2DRender(pRenderTarget, m_shapeDrawFlags, &m_rsFAR);
 	}
 
+	void D2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
+		m_worldActive->SS2DOnResize(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
+	}
+
 	void D2DOnDiscardResources() override {
 		m_worldActive->SS2DDiscardResources();
 

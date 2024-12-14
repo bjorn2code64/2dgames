@@ -202,6 +202,7 @@ protected:
 		if (m_pRenderTarget) {
 			m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
 			m_rsFAR.SetBounds(m_pRenderTarget->GetSize());
+			D2DOnResize(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
 		}
 		return false;
 	}
@@ -213,6 +214,8 @@ protected:
 
 	virtual bool SS2DInit() { return true; }
 	virtual void SS2DDeInit() {}
+
+	virtual void D2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {}
 
 	virtual bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) { return false;  }	// manipulate your data here - return true to quit
 

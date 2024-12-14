@@ -71,7 +71,6 @@ public:
 		m_notifier(notifier),
 
 		// tickers
-		m_tdInvaderMove(m_invaderMoveDelayStart),
 		m_tdPlayerReset(m_playerResetTime, false),
 		m_tdShip(m_shipSpawnTime),
 		m_tdShipScore(2000, false),
@@ -97,6 +96,9 @@ public:
 		m_bitmapSquid[1] = NewResourceBitmap(L"squidOpen.png");
 		m_bitmapUFO = NewResourceBitmap(L"UFO.png");
 		m_bitmapHit = NewResourceBitmap(L"invaderGone.png");
+
+		// Set up dynamic timers
+		m_tdInvaderMove.SetPeriod(m_invaderMoveDelayStart);
 
 		// Create texts
 		m_textScore = NewMovingText(L"", 0.0f, m_textHeight * 1.5f, 200.0f, m_textHeight, 0.0f, 0, DWRITE_TEXT_ALIGNMENT_CENTER, m_brushGreen);

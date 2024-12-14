@@ -24,29 +24,33 @@ public:
 	MovingGroup* NewBauble(FLOAT x, FLOAT y, int dir) {
 		int col = w32rand(4);
 		auto g = NewMovingGroup(x, y, 1, dir, (LPARAM)col);
-		g->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, m_ballDiameter, m_ballDiameter, 0, 0);
-		g->NewMovingCircle(m_ballRadius, m_ballRadius, m_ballRadius, 0, 0, m_brushMask);
+		g->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, m_ballDiameter, m_ballDiameter, 0, 0);	// picture at 0
+		g->NewMovingCircle(m_ballRadius, m_ballRadius, m_ballRadius, 0, 0, m_brushMask);		// mask at 1
 		return g;
 	}
 
 	bool SS2DInit() override {
 		// Create the resources we need
-		m_brushMask = NewResourceBrush(RGB(255, 255, 255), 0.5f);
+		m_brushMask = NewResourceBrush(RGB(255, 255, 255), 0.0f);
 		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_red.png"));	// 56x56
 		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_blue.png"));	// 56x56
 		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_yellow.png"));	// 56x56
 		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_green.png"));	// 56x56
-		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_purple.png"));	// 56x56
+		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_orange.png"));	// 56x56
+
+		m_scoreLabel = NewMovingText(L"Score", 100, 10, 100, 20, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush());
+		m_scoreValue = NewMovingText(L"00000", 200, 10, 100, 20, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush());
+		m_score = 0;
 
 		// Create the shapes we need
 		m_player = NewMovingRectangle(430, 850, m_playerWidth, m_playerHeight, 0, 0, GetDefaultBrush());
 
 		int col = w32rand(4);
 		m_playerBullet = NewMovingGroup(430, 850, 0, 0, (LPARAM)col);
-		m_playerBullet->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, m_ballDiameter, m_ballDiameter, 0, 0);
-		m_playerBullet->NewMovingCircle(m_ballRadius, m_ballRadius, m_ballRadius, 0, 0, m_brushMask);
+		m_playerBullet->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, m_ballDiameter, m_ballDiameter, 0, 0);	// picture at 0
+		m_playerBullet->NewMovingCircle(m_ballRadius, m_ballRadius, m_ballRadius, 0, 0, m_brushMask);		// mask at 1
 
-		for (int i = 0; i < m_ballCount; i++) {NewMovingBitmap(m_baubleBitmaps[col], 430, 850, m_ballDiameter, m_ballDiameter, 0, 0, 1.0f, (LPARAM)col);
+		for (int i = 0; i < m_ballCount; i++) { 
 			auto g = NewBauble(i * m_ballDiameter, 700, 90);
 			m_baubles.push_back(g);
 			m_lines[0].push_back(g);
@@ -82,12 +86,18 @@ public:
 	}
 
 	MovingGroup* HitTestBaubles(MovingGroup* bullet) {
-		for (auto c : m_baubles) {
-			if (c->IsActive() && bullet->HitTestShape(c)) {
-				return c;
+		MovingCircle* bulletMask = (MovingCircle*)bullet->GetChildren()[1];
+		for (auto group : m_baubles) {
+			MovingCircle* mask = (MovingCircle*)group->GetChildren()[1];
+			if (group->IsActive() && bulletMask->HitTestShape(mask)) {
+				return group;
 			}
 		}
 		return NULL;
+	}
+
+	void UpdateScore() {
+		m_scoreValue->SetText(std::to_wstring(m_score).c_str());
 	}
 
 	void CheckLine(std::list<MovingGroup*>& line) {
@@ -96,22 +106,25 @@ public:
 		std::list<MovingGroup*>::iterator itStart;
 		for (int i = 0; i < 2; i++) {
 			for (auto it = line.begin(); it != line.end(); ++it) {
-				if (crLast == (*it)->GetUserData()) {
+				auto nextBauble = *it;
+				if (nextBauble->IsActive() && (crLast == nextBauble->GetUserData())) {
 					match++;
 				}
 				else {
 					if (match > 3) {
 						// zap the lot
 						while (itStart != it) {
-							(*itStart)->SetActive(false);
+							(*itStart)->SetActive(false);	// Set the whole group inactive
 							if (++itStart == line.end()) {
 								itStart = line.begin();
 							}
+							m_score += 10;
+							UpdateScore();
 						}
 					}
 					match = 1;
 					itStart = it;
-					crLast = (int)(*it)->GetUserData();
+					crLast = (int)nextBauble->GetUserData();
 				}
 			}
 		}
@@ -134,6 +147,35 @@ public:
 			else {
 				++it;
 			}
+		}
+
+		// Hit test the snow with the baubles and settle if there's a hit.
+		for (auto it = m_snow.begin(); it != m_snow.end(); ) {
+			auto sf = *it;
+
+			bool hit = false;
+			for (auto group : m_baubles) {
+				if (group->IsActive()) {
+					if (w32rand(100) == 0) {
+						auto mask = (MovingCircle*)group->GetChildren()[1];
+						if (sf->HitTestShape(mask)) {
+							// Stop the snowflake and move into the bauble group that it hit
+							sf->SetSpeed(0);
+							sf->OffsetPos(Point2F(-group->GetPos().x, -group->GetPos().y));
+							RemoveShape(sf);	// remove it from the engine
+							group->AddChild(sf);	// add it to the group
+							hit = true;
+							break;
+						}
+					}
+				}
+			}
+
+			if (hit) {
+				it = m_snow.erase(it);
+			}
+			else
+				++it;
 		}
 
 		// Wrap any baubles gone off the board
@@ -239,6 +281,10 @@ protected:
 	std::vector<SS2DBitmap*> m_baubleBitmaps;
 
 	std::vector<MovingCircle*> m_snow;
+
+	MovingText* m_scoreLabel;
+	MovingText* m_scoreValue;
+	int m_score;
 
 public:
 	AppMessage m_amQuit;
