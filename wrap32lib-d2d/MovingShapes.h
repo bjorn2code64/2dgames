@@ -14,17 +14,17 @@ public:
 		return distSq <= m_fRadius * m_fRadius;
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
+	void Draw(const SS2DEssentials& ess) override {
 		D2D1_ELLIPSE e;
 		e.point = GetPos();
-		if (pRS)	pRS->Scale(&e.point);
+		ess.m_rsFAR.Scale(&e.point);
 
 		FLOAT r = m_fRadius;
-		if (pRS)	pRS->ScaleNoOffset(&r);
+		ess.m_rsFAR.ScaleNoOffset(&r);
 		e.radiusX = e.radiusY = r;
 
-		pRenderTarget->FillEllipse(&e, *GetBrush());
-		__super::Draw(pRenderTarget, dwFlags, pRS);
+		ess.m_pRenderTarget->FillEllipse(&e, *GetBrush());
+		__super::Draw(ess);
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
@@ -178,26 +178,24 @@ public:
 	void SetWidth(FLOAT f) { m_fWidth = f; }
 	void SetHeight(FLOAT f) { m_fHeight = f; }
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
+	void Draw(const SS2DEssentials& ess, Point2F pos) override {
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
-		if (pRS) {
-			pRS->Scale(&pos);
-			pRS->ScaleNoOffset(&fWidth);
-			pRS->ScaleNoOffset(&fHeight);
-		}
+		ess.m_rsFAR.Scale(&pos);
+		ess.m_rsFAR.ScaleNoOffset(&fWidth);
+		ess.m_rsFAR.ScaleNoOffset(&fHeight);
 
 		D2D1_RECT_F r;
 		r.left = pos.x;
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		pRenderTarget->FillRectangle(&r, *GetBrush());
-		__super::Draw(pRenderTarget, dwFlags, pRS);
+		ess.m_pRenderTarget->FillRectangle(&r, *GetBrush());
+		__super::Draw(ess);
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
-		Draw(pRenderTarget, GetPos(), dwFlags, pRS);
+	void Draw(const SS2DEssentials& ess) override {
+		Draw(ess, GetPos());
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
@@ -223,26 +221,24 @@ public:
 		m_bitmap = bitmap;
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
+	void Draw(const SS2DEssentials& ess) override {
 		Point2F pos = GetPos();
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
-		if (pRS) {
-			pRS->Scale(&pos);
-			pRS->ScaleNoOffset(&fWidth);
-			pRS->ScaleNoOffset(&fHeight);
-		}
+		ess.m_rsFAR.Scale(&pos);
+		ess.m_rsFAR.ScaleNoOffset(&fWidth);
+		ess.m_rsFAR.ScaleNoOffset(&fHeight);
 
 		D2D1_RECT_F r;
 		r.left = pos.x;
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		m_bitmap->Render(pRenderTarget, r, m_opacity);
-		if (dwFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS) {
-			pRenderTarget->DrawRectangle(&r, *GetBrush());
+		m_bitmap->Render(ess.m_pRenderTarget, r, m_opacity);
+		if (ess.m_ss2dFlags & SS2D_SHOW_BITMAP_BOUNDS) {
+			ess.m_pRenderTarget->DrawRectangle(&r, *GetBrush());
 		}
-		__super::Draw(pRenderTarget, dwFlags, pRS);
+		__super::Draw(ess);
 	}
 
 	void GetBoundingBox(RectF* p, const Point2F& pos) const {
@@ -270,10 +266,10 @@ public:
 	{
 	}
 
-	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) override {
+	void SS2DCreateResources(const SS2DEssentials& ess) override {
 		FLOAT fHeight = m_fHeight;
-		pRS->ScaleNoOffset(&fHeight);
-		pDWriteFactory->CreateTextFormat(
+		ess.m_rsFAR.ScaleNoOffset(&fHeight);
+		ess.m_pDWriteFactory->CreateTextFormat(
 			L"Arial",
 			NULL,
 			DWRITE_FONT_WEIGHT_REGULAR,
@@ -286,7 +282,7 @@ public:
 
 		m_pWTF->SetTextAlignment(m_ta);
 
-		__super::SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		__super::SS2DCreateResources(ess);
 	}
 
 	void SS2DDiscardResources() override {
@@ -294,32 +290,30 @@ public:
 		__super::SS2DDiscardResources();
 	}
 
-	void SS2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) override {
+	void SS2DOnResize(const SS2DEssentials& ess) override {
 		SS2DDiscardResources();	// destroy the text so it gets recreated at the correct size next frame
-		SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+		SS2DCreateResources(ess);
 	}
 
 	void SetText(LPCWSTR wsz) {
 		m_text = wsz;
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
+	void Draw(const SS2DEssentials& ess) override {
 		Point2F pos = GetPos();
 		FLOAT fWidth = m_fWidth;
 		FLOAT fHeight = m_fHeight;
-		if (pRS) {
-			pRS->Scale(&pos);
-			pRS->ScaleNoOffset(&fWidth);
-			pRS->ScaleNoOffset(&fHeight);
-		}
+		ess.m_rsFAR.Scale(&pos);
+		ess.m_rsFAR.ScaleNoOffset(&fWidth);
+		ess.m_rsFAR.ScaleNoOffset(&fHeight);
 
 		D2D1_RECT_F r;
 		r.left = pos.x;
 		r.right = pos.x + fWidth;
 		r.top = pos.y;
 		r.bottom = pos.y + fHeight;
-		pRenderTarget->DrawTextW(m_text.c_str(), (UINT32)m_text.length(), m_pWTF, r, *m_pBrush);
-		__super::Draw(pRenderTarget, dwFlags, pRS);
+		ess.m_pRenderTarget->DrawTextW(m_text.c_str(), (UINT32)m_text.length(), m_pWTF, r, *m_pBrush);
+		__super::Draw(ess);
 	}
 
 	virtual void GetBoundingBox(RectF* pRect, const Point2F& pos) const {
@@ -411,24 +405,22 @@ public:
 //		m_rectChildBounds.Offset(GetPos());
 	}
 
-	void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) override {
-		if (dwFlags & SHAPEDRAW_SHOW_GROUP_BOUNDS) {
+	void Draw(const SS2DEssentials& ess, Point2F pos) override {
+		if (ess.m_ss2dFlags & SS2D_SHOW_GROUP_BOUNDS) {
 			FLOAT fWidth = m_fWidth;
 			FLOAT fHeight = m_fHeight;
-			if (pRS) {
-				pRS->Scale(&pos);
-				pRS->ScaleNoOffset(&fWidth);
-				pRS->ScaleNoOffset(&fHeight);
-			}
+			ess.m_rsFAR.Scale(&pos);
+			ess.m_rsFAR.ScaleNoOffset(&fWidth);
+			ess.m_rsFAR.ScaleNoOffset(&fHeight);
 
 			D2D1_RECT_F r;
 			r.left = pos.x;
 			r.right = pos.x + fWidth;
 			r.top = pos.y;
 			r.bottom = pos.y + fHeight;
-			pRenderTarget->DrawRectangle(&r, *GetBrush());
+			ess.m_pRenderTarget->DrawRectangle(&r, *GetBrush());
 		}
-		Shape::Draw(pRenderTarget, dwFlags, pRS);
+		Shape::Draw(ess);
 	}
 
 	moveResult WillHitBounds(const RectF& rBounds) {

@@ -4,6 +4,7 @@
 #include <json.h>
 #include <thread.h>
 #include <TimerQueue.h>
+#include <CriticalSection.h>
 
 #include <dwrite.h>
 #include <d2d1.h>
@@ -38,14 +39,9 @@ public:
 	D2DWindow(WORD flags, Window* pParent = NULL, DWORD dwUpdateRate = 20) :
 		Window(flags, pParent),
 		m_pDirect2dFactory(NULL),
-		m_pDWriteFactory(NULL),
-		m_pIWICFactory(NULL),
-		m_pRenderTarget(NULL),
 		m_dwUpdateRate(dwUpdateRate),
-		m_rsFAR(0, 0),
 		m_updateTime(0),
-		m_updateCount(0),
-		m_shapeDrawFlags(0)
+		m_updateCount(0)
 	{}
 
 	~D2DWindow(void) {
@@ -53,7 +49,7 @@ public:
 	}
 
 	void Init(const w32Size& size) {
-		m_rsFAR.SetBaseSize(size);
+		m_ess.m_rsFAR.SetBaseSize(size);
 		Start();
 	}
 
@@ -79,33 +75,34 @@ public:
 		case WM_MOUSEMOVE:	// Track the mouse
 		{
 			w32Point mouse = lParam;
-			m_rsFAR.ReverseScaleAndOffset(&mouse);
+			m_ess.m_rsFAR.ReverseScaleAndOffset(&mouse);
 			m_ptMouse = mouse;
 		}
 		break;
 
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONUP:
+			m_csEvents.Enter();
 			m_events.push(WindowEvent(uMsg, wParam, lParam));
+			m_csEvents.Leave();
 			break;
 
 		case WM_KEYDOWN:
 			if (::GetAsyncKeyState(VK_CONTROL) & 0x8000) {
 				if (wParam == 'G') {
-					if (m_shapeDrawFlags & SHAPEDRAW_SHOW_GROUP_BOUNDS)
-						m_shapeDrawFlags &= ~SHAPEDRAW_SHOW_GROUP_BOUNDS;
-					else
-						m_shapeDrawFlags |= SHAPEDRAW_SHOW_GROUP_BOUNDS;
+					m_ess.toggleFlag(SS2D_SHOW_GROUP_BOUNDS);
 				}
-				else if (wParam == 'B') {
-					if (m_shapeDrawFlags & SHAPEDRAW_SHOW_BITMAP_BOUNDS)
-						m_shapeDrawFlags &= ~SHAPEDRAW_SHOW_BITMAP_BOUNDS;
-					else
-						m_shapeDrawFlags |= SHAPEDRAW_SHOW_BITMAP_BOUNDS;
+				else if (wParam == 'B') {;
+					m_ess.toggleFlag(SS2D_SHOW_BITMAP_BOUNDS);
+				}
+				else if (wParam == 'S') {
+					m_ess.toggleFlag(SS2D_SHOW_STATS);
 				}
 			}
 		case WM_KEYUP:
+			m_csEvents.Enter();
 			m_events.push(WindowEvent(uMsg, wParam, lParam));
+			m_csEvents.Leave();
 			break;
 		}
 
@@ -116,7 +113,7 @@ protected:
 	HRESULT EnsureDeviceResourcesCreated() {
 		HRESULT hr = S_OK;
 
-		if (!m_pRenderTarget) {
+		if (!m_ess.m_pRenderTarget) {
 			w32Rect rc;
 			GetClientRect(*this, &rc);
 
@@ -129,18 +126,18 @@ protected:
 			hr = m_pDirect2dFactory->CreateHwndRenderTarget(
 				D2D1::RenderTargetProperties(),
 				D2D1::HwndRenderTargetProperties(*this, size),
-				&m_pRenderTarget
+				&m_ess.m_pRenderTarget
 			);
 
-			if (!m_pRenderTarget) {
+			if (!m_ess.m_pRenderTarget) {
 				return hr;
 			}
-			m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
+			m_ess.m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
 
 			// Set rsFAR up first as it may be used in Creation of resources
-			m_rsFAR.SetBounds(m_pRenderTarget->GetSize());
+			m_ess.m_rsFAR.SetBounds(m_ess.m_pRenderTarget->GetSize());
 
-			SS2DCreateResources(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
+			SS2DCreateResources(m_ess);
 		}
 
 		return hr;
@@ -153,8 +150,8 @@ protected:
 			return HRESULT_CODE(hr);
 
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED,
-			__uuidof(m_pDWriteFactory),
-			reinterpret_cast<IUnknown**>(&m_pDWriteFactory));
+			__uuidof(m_ess.m_pDWriteFactory),
+			reinterpret_cast<IUnknown**>(&m_ess.m_pDWriteFactory));
 
 		if (FAILED(hr))
 			return HRESULT_CODE(hr);
@@ -162,14 +159,14 @@ protected:
 		// The factory returns the current system DPI. This is also the value it will use
 		// to create its own windows.
 		FLOAT dpi = (FLOAT)GetDpiForWindow(*this);
-		m_rsFAR.SetDPI(dpi, dpi);
+		m_ess.m_rsFAR.SetDPI(dpi, dpi);
 
 		hr = CoCreateInstance(
 			CLSID_WICImagingFactory,
 			NULL,
 			CLSCTX_INPROC_SERVER,
 			IID_IWICImagingFactory,
-			reinterpret_cast<void**>(&m_pIWICFactory)
+			reinterpret_cast<void**>(&m_ess.m_pIWICFactory)
 		);
 
 		if (FAILED(hr))
@@ -181,16 +178,21 @@ protected:
 	bool OnUpdateTimer() {
 		ULONGLONG updateStart = GetTickCount64();
 
-		if (!SS2DUpdate(updateStart, m_ptMouse, m_events)) return true;
+		m_csEvents.Enter();
+		if (!SS2DUpdate(updateStart, m_ptMouse, m_events)) {
+			m_csEvents.Leave();
+			return true;
+		}
 		m_events = std::queue<WindowEvent>();
+		m_csEvents.Leave();
 
 		if (EnsureDeviceResourcesCreated() != S_OK)	return true;
 
-		D2DPreRender(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
+		D2DPreRender(m_ess);
 
-		m_pRenderTarget->BeginDraw();
-		D2DRender(m_pRenderTarget);
-		if (m_pRenderTarget->EndDraw() == D2DERR_RECREATE_TARGET) {
+		m_ess.m_pRenderTarget->BeginDraw();
+		D2DRender();
+		if (m_ess.m_pRenderTarget->EndDraw() == D2DERR_RECREATE_TARGET) {
 			D2DDiscard();	// Free these up so they're created again next time around
 		}
 		m_updateTime += GetTickCount64() - updateStart;
@@ -199,28 +201,28 @@ protected:
 	}
 
 	bool OnResize() {
-		if (m_pRenderTarget) {
-			m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
-			m_rsFAR.SetBounds(m_pRenderTarget->GetSize());
-			D2DOnResize(m_pDWriteFactory, m_pRenderTarget, m_pIWICFactory);
+		if (m_ess.m_pRenderTarget) {
+			m_ess.m_pRenderTarget->Resize(D2D1::SizeU(m_size.cx, m_size.cy));
+			m_ess.m_rsFAR.SetBounds(m_ess.m_pRenderTarget->GetSize());
+			D2DOnResize(m_ess);
 		}
 		return false;
 	}
 
 	void D2DDiscard() {
 		D2DOnDiscardResources();
-		SafeRelease(&m_pRenderTarget);
+		SafeRelease(&m_ess.m_pRenderTarget);
 	}
 
 	virtual bool SS2DInit() { return true; }
 	virtual void SS2DDeInit() {}
 
-	virtual void D2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {}
+	virtual void D2DOnResize(const SS2DEssentials& ess) {}
 
 	virtual bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) { return false;  }	// manipulate your data here - return true to quit
 
-	virtual void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {}	// draw the data here
-	virtual void D2DRender(ID2D1HwndRenderTarget* pRenderTarget) {}	// draw the data here
+	virtual void D2DPreRender(const SS2DEssentials& ess) {}	// draw the data here
+	virtual void D2DRender() {}	// draw the data here
 
 	void ThreadStartup() override {
 		m_updateTime = 0;
@@ -252,47 +254,49 @@ protected:
 	void ThreadShutdown() override {
 		// Clear the d2d stuff first
 		D2DDiscard();
-		SafeRelease(&m_pIWICFactory);
-		SafeRelease(&m_pDWriteFactory);
+		SafeRelease(&m_ess.m_pIWICFactory);
+		SafeRelease(&m_ess.m_pDWriteFactory);
 		SafeRelease(&m_pDirect2dFactory);
+
 		// Deallocate Objects
 		SS2DDeInit();
 		CoUninitialize();
 	}
 
 	void D2DRenderPoint(D2D1_POINT_2F pt, ID2D1SolidColorBrush* pBrush, FLOAT fStrokeWidth = 1.0F) {
-		m_rsFAR.Scale(&pt);
+		m_ess.m_rsFAR.Scale(&pt);
 
 		D2D1_POINT_2F pt2 = pt;
 		pt2.x += fStrokeWidth - 0.4F;
 
-		m_pRenderTarget->DrawLine(pt, pt2, pBrush, fStrokeWidth);
+		m_ess.m_pRenderTarget->DrawLine(pt, pt2, pBrush, fStrokeWidth);
 	}
 
-	void D2DClearScreen(D2D1::ColorF c)	{	m_pRenderTarget->Clear(c);	}
-	void D2DGetFARRect(RectF* p)		{	m_rsFAR.GetUserRect(p);		}
+	void D2DClearScreen(D2D1::ColorF c)	{ m_ess.m_pRenderTarget->Clear(c);	}
+	void D2DGetFARRect(RectF* p)		{ m_ess.m_rsFAR.GetUserRect(p);		}
 
-	virtual void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget,
-		IWICImagingFactory* pIWICFactory) {}
+	virtual void SS2DCreateResources(const SS2DEssentials& ess) {}
 	virtual void D2DOnDiscardResources() {}
 
 	ULONGLONG GetAvgUpdateTime() { return (m_updateCount > 0) ? m_updateTime / m_updateCount : 0;  }
 
 protected:
+	// Drawing stuff
+	SS2DEssentials m_ess;
 	ID2D1Factory* m_pDirect2dFactory;
-	IDWriteFactory* m_pDWriteFactory;
-	ID2D1HwndRenderTarget* m_pRenderTarget;
-	D2DRectScaler m_rsFAR;	// Maintains Fixed Aspect Ratio rect, regardless of window size
 	DirectWrite m_dw;
-	IWICImagingFactory* m_pIWICFactory;
-	Event m_evResize;
-	w32Size m_size;
+
+	Event m_evResize;		// Notify when the window resizes
+	w32Size m_size;			// Track the windo size
+
 	DWORD m_dwUpdateRate;	// in ms
-	Point2F m_ptMouse;				// Track the mouse position
+	Point2F m_ptMouse;		// Track the mouse position
+
+	// Events stuff - keypress, etc.
 	std::queue<WindowEvent> m_events;
+	CriticalSection m_csEvents;		// Ensure threads don't fight over the events queue
 
-	DWORD m_shapeDrawFlags;
-
+	// Performance stats
 	ULONGLONG m_updateTime;		// Time spent in update function (ms)
 	ULONGLONG m_updateCount;	// Number of calls to update function
 };

@@ -189,7 +189,7 @@ public:
 		if (m_italic)		jbs.Add(L"italic", m_italic);
 	}
 
-	void SS2DCreateResources(ID2D1HwndRenderTarget* pRenderTarget, DirectWrite& dw, D2DRectScaler& rsFar) {
+	void D2DCreateResources(ID2D1HwndRenderTarget* pRenderTarget, DirectWrite& dw, SS2DRectScaler& rsFar) {
 		FLOAT fFontSize = m_fontSize;
 		rsFar.ScaleNoOffset(&fFontSize);
 		m_dwtf.Init(dw, m_fontName.c_str(), fFontSize, (DWRITE_TEXT_ALIGNMENT)m_alignment, m_bold, m_italic);

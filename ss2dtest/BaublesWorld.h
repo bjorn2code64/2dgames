@@ -5,12 +5,12 @@
 
 class BaublesWorld : public SS2DWorld
 {
-	const FLOAT m_playerMoveSpeed = 10;
-	const int m_screenWidth = 900;
-	const int m_screenHeight = 900;
-	const FLOAT m_ballDiameter = 56.0f;
-	const FLOAT m_ballRadius = m_ballDiameter / 2.0f;
-	const int m_ballCount = (int)(m_screenWidth / m_ballDiameter + 1);
+	const FLOAT c_playerMoveSpeed = 10;
+	const int c_screenWidth = 900;
+	const int c_screenHeight = 900;
+	const FLOAT c_ballDiameter = 56.0f;
+	const FLOAT c_ballRadius = c_ballDiameter / 2.0f;
+	const int c_baublesPerRow = (int)(c_screenWidth / c_ballDiameter + 1);
 	const FLOAT m_playerWidth = 100.0f;
 	const FLOAT m_playerHeight = 30.0f;
 
@@ -18,25 +18,32 @@ public:
 	BaublesWorld(Notifier& notifier) : 
 		m_notifier(notifier)
 	{
-		SS2DSetScreenSize(w32Size(m_screenWidth, m_screenHeight));
+		SS2DSetScreenSize(w32Size(c_screenWidth, c_screenHeight));
 	}
 
 	MovingGroup* NewBauble(FLOAT x, FLOAT y, int dir) {
 		int col = w32rand(4);
 		auto g = NewMovingGroup(x, y, 1, dir, (LPARAM)col);
-		g->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, m_ballDiameter, m_ballDiameter, 0, 0);	// picture at 0
-		g->NewMovingCircle(m_ballRadius, m_ballRadius, m_ballRadius, 0, 0, m_brushMask);		// mask at 1
+		g->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, c_ballDiameter, c_ballDiameter, 0, 0);	// picture at 0
+		g->NewMovingCircle(c_ballRadius, c_ballRadius, c_ballRadius, 0, 0, m_brushInvisible);		// mask at 1
 		return g;
 	}
 
 	bool SS2DInit() override {
 		// Create the resources we need
-		m_brushMask = NewResourceBrush(RGB(255, 255, 255), 0.0f);
-		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_red.png"));	// 56x56
-		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_blue.png"));	// 56x56
-		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_yellow.png"));	// 56x56
-		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_green.png"));	// 56x56
-		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_orange.png"));	// 56x56
+		m_brushInvisible = NewResourceBrush(RGB(255, 255, 255), 0.0f);
+
+		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_red.png"));
+		m_baubleBitmaps.push_back(NewResourceBitmap(L"snowman1.png"));
+		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_yellow.png"));
+		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_green.png"));
+		m_baubleBitmaps.push_back(NewResourceBitmap(L"bauble_orange.png"));
+
+		m_baubleMovingBitmaps.push_back(NULL);
+		m_baubleMovingBitmaps.push_back(NewResourceBitmap(L"snowman2.png"));
+		m_baubleMovingBitmaps.push_back(NULL);
+		m_baubleMovingBitmaps.push_back(NULL);
+		m_baubleMovingBitmaps.push_back(NULL);
 
 		m_scoreLabel = NewMovingText(L"Score", 100, 10, 100, 20, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush());
 		m_scoreValue = NewMovingText(L"00000", 200, 10, 100, 20, 0, 0, DWRITE_TEXT_ALIGNMENT_CENTER, GetDefaultBrush());
@@ -46,30 +53,30 @@ public:
 		m_player = NewMovingRectangle(430, 850, m_playerWidth, m_playerHeight, 0, 0, GetDefaultBrush());
 
 		int col = w32rand(4);
-		m_playerBullet = NewMovingGroup(430, 850, 0, 0, (LPARAM)col);
-		m_playerBullet->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, m_ballDiameter, m_ballDiameter, 0, 0);	// picture at 0
-		m_playerBullet->NewMovingCircle(m_ballRadius, m_ballRadius, m_ballRadius, 0, 0, m_brushMask);		// mask at 1
+		m_bullet = NewMovingGroup(430, 850, 0, 0, (LPARAM)col);
+		m_bullet->NewMovingBitmap(m_baubleBitmaps[col], 0, 0, c_ballDiameter, c_ballDiameter, 0, 0);	// picture at 0
+		m_bullet->NewMovingCircle(c_ballRadius, c_ballRadius, c_ballRadius, 0, 0, m_brushInvisible);		// mask at 1
 
-		for (int i = 0; i < m_ballCount; i++) { 
-			auto g = NewBauble(i * m_ballDiameter, 700, 90);
+		for (int i = 0; i < c_baublesPerRow; i++) { 
+			auto g = NewBauble(i * c_ballDiameter, 700, 90);
 			m_baubles.push_back(g);
 			m_lines[0].push_back(g);
 		}
 
-		for (int i = 0; i < m_ballCount; i++) {
-			auto g = NewBauble(i * m_ballDiameter, 500, 270);
+		for (int i = 0; i < c_baublesPerRow; i++) {
+			auto g = NewBauble(i * c_ballDiameter, 500, 270);
 			m_baubles.push_back(g);
 			m_lines[1].push_back(g);
 		}
 
-		for (int i = 0; i < m_ballCount; i++) {
-			auto g = NewBauble(i * m_ballDiameter, 300, 90);
+		for (int i = 0; i < c_baublesPerRow; i++) {
+			auto g = NewBauble(i * c_ballDiameter, 300, 90);
 			m_baubles.push_back(g);
 			m_lines[2].push_back(g);
 		}
 
-		for (int i = 0; i < m_ballCount; i++) {
-			auto g = NewBauble(i * m_ballDiameter, 100, 270);
+		for (int i = 0; i < c_baublesPerRow; i++) {
+			auto g = NewBauble(i * c_ballDiameter, 100, 270);
 			m_baubles.push_back(g);
 			m_lines[3].push_back(g);
 		}
@@ -103,7 +110,7 @@ public:
 	void CheckLine(std::list<MovingGroup*>& line) {
 		int crLast = 0;
 		int match = 0;
-		std::list<MovingGroup*>::iterator itStart;
+		std::list<MovingGroup*>::iterator itStart = line.begin();
 		for (int i = 0; i < 2; i++) {
 			for (auto it = line.begin(); it != line.end(); ++it) {
 				auto nextBauble = *it;
@@ -161,9 +168,10 @@ public:
 						if (sf->HitTestShape(mask)) {
 							// Stop the snowflake and move into the bauble group that it hit
 							sf->SetSpeed(0);
-							sf->OffsetPos(Point2F(-group->GetPos().x, -group->GetPos().y));
-							RemoveShape(sf);	// remove it from the engine
-							group->AddChild(sf);	// add it to the group
+
+							RemoveShape(sf);				// Remove it as a standalone from the engine
+							group->AddChildAndOffset(sf);	// Add it to the group (which is already in the engine)
+							m_snowSettled.push(sf);
 							hit = true;
 							break;
 						}
@@ -179,42 +187,43 @@ public:
 		}
 
 		// Wrap any baubles gone off the board
-		RectF hit(-m_ballDiameter, 0, SS2DGetScreenSize().cx + (2 * m_ballDiameter), (FLOAT)SS2DGetScreenSize().cy);
+		RectF hit(-c_ballDiameter, 0, SS2DGetScreenSize().cx + (2 * c_ballDiameter), (FLOAT)SS2DGetScreenSize().cy);
 		for (auto c : m_baubles) {
 			auto hitResult = c->WillHitBounds(hit);
 
 			if (hitResult == Shape::moveResult::hitboundsright) {
-				c->OffsetPos(Point2F((FLOAT)-m_screenWidth - m_ballDiameter, 0));
+				c->OffsetPos(Point2F((FLOAT)-c_screenWidth - c_ballDiameter, 0));
 			}
 			else if (hitResult == Shape::moveResult::hitboundsleft) {
-				c->OffsetPos(Point2F((FLOAT)m_screenWidth + m_ballDiameter, 0));
+				c->OffsetPos(Point2F((FLOAT)c_screenWidth + c_ballDiameter, 0));
 			}
 		}
 
 		// Bullet off top of screen?
-		if (m_playerBullet->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundstop) {
-			m_playerBullet->SetSpeed(0);
+		if (m_bullet->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundstop) {
+			m_bullet->SetSpeed(0);
 			int col = w32rand(4);;
-			m_playerBullet->SetUserData(col);
-			((MovingBitmap*)m_playerBullet->GetChildren()[0])->SetBitmap(m_baubleBitmaps[col]);
+			m_bullet->SetUserData(col);
+			((MovingBitmap*)m_bullet->GetChildren()[0])->SetBitmap(m_baubleBitmaps[col]);
 		}
 
 		// Did the bullet hit anything
-		auto circlehit = HitTestBaubles(m_playerBullet);
-		if (circlehit) {
+		auto baublehit = HitTestBaubles(m_bullet);
+		if (baublehit) {
 			// swap bitmaps with the bullet
-			auto bmp = m_playerBullet->GetUserData();
-			auto cbr = circlehit->GetUserData();
-			auto cPos = circlehit->GetPos();
-			m_playerBullet->SetPos(Point2F(cPos.x, cPos.y - m_ballDiameter - 1));
+			auto bmp = m_bullet->GetUserData();
+			auto cbr = baublehit->GetUserData();
+			auto cPos = baublehit->GetPos();
+			m_bullet->SetPos(Point2F(cPos.x, cPos.y - c_ballDiameter - 1));
 
-			m_playerBullet->SetUserData(cbr);
-			((MovingBitmap*)m_playerBullet->GetChildren()[0])->SetBitmap(m_baubleBitmaps[cbr]);
+			m_bullet->SetUserData(cbr);
+			SS2DBitmap* bmpNext = m_baubleMovingBitmaps[cbr] ? m_baubleMovingBitmaps[cbr] : m_baubleBitmaps[cbr];
+			((MovingBitmap*)m_bullet->GetChildren()[0])->SetBitmap(bmpNext);
 
-			circlehit->SetUserData(bmp);
-			((MovingBitmap*)circlehit->GetChildren()[0])->SetBitmap(m_baubleBitmaps[bmp]);
+			baublehit->SetUserData(bmp);
+			((MovingBitmap*)baublehit->GetChildren()[0])->SetBitmap(m_baubleBitmaps[bmp]);
 
-			m_playerBullet->SetSpeed(m_playerBullet->GetSpeed() / 2);
+			m_bullet->SetSpeed(m_bullet->GetSpeed() / 2);
 			CheckLines();
 		}
 
@@ -223,11 +232,11 @@ public:
 			m_player->SetSpeed(0);
 		}
 		else if (KeyDown(VK_RIGHT)) {
-			m_player->SetSpeed(m_playerMoveSpeed);
+			m_player->SetSpeed(c_playerMoveSpeed);
 			m_player->SetDirectionInDeg(90);
 		}
 		else if (KeyDown(VK_LEFT)) {
-			m_player->SetSpeed(m_playerMoveSpeed);
+			m_player->SetSpeed(c_playerMoveSpeed);
 			m_player->SetDirectionInDeg(270);
 		}
 		else {
@@ -235,11 +244,12 @@ public:
 		}
 
 		// If player bullet isn't moving, track the player
-		if (m_playerBullet->GetSpeed() == 0) {
+		if (m_bullet->GetSpeed() == 0) {
 			auto pos = m_player->GetPos();
-			pos.x += m_playerWidth / 2 - m_ballDiameter / 2;
-			pos.y += m_playerHeight - m_ballDiameter;
-			m_playerBullet->SetPos(pos);
+			m_player->MovePos(pos);
+			pos.x += m_playerWidth / 2 - c_ballDiameter / 2;
+			pos.y += m_playerHeight - c_ballDiameter;
+			m_bullet->SetPos(pos);
 		}
 
 		// Check for quit (Escape)
@@ -250,8 +260,8 @@ public:
 					m_notifier.Notify(m_amQuit);	// QUIT
 				}
 				else if (ev.m_wParam == VK_CONTROL) {	// fire
-					m_playerBullet->SetSpeed(20);
-					m_playerBullet->SetDirectionInDeg(0);
+					m_bullet->SetSpeed(20);
+					m_bullet->SetDirectionInDeg(0);
 				}
 			}
 
@@ -259,12 +269,20 @@ public:
 		}
 
 		// Make SNOW!
-		int x = w32rand(m_screenWidth - 1);
-		int dir = w32rand(170, 190);
+		int x = w32rand(c_screenWidth - 1);
+		int dir = w32rand(160, 200);
 		int speed = w32rand(50, 150);
 
 		auto snowflake = NewMovingCircle((FLOAT)x, 2, 1, (FLOAT)speed / 100.0f, dir, GetDefaultBrush());
 		m_snow.push_back(snowflake);
+
+		// Clean up SNOW!
+		if (m_snowSettled.size() > 1000) {
+			auto sf = m_snowSettled.front();
+			m_snowSettled.pop();
+			auto group = (MovingGroup*)sf->GetParent();
+			group->RemoveChild(sf, true);
+		}
 
 		return __super::SS2DUpdate(tick, ptMouse, events);
 	}
@@ -272,15 +290,17 @@ public:
 protected:
 	Notifier& m_notifier;
 
-	SS2DBrush* m_brushMask;
+	SS2DBrush* m_brushInvisible;
 	MovingRectangle* m_player;
-	MovingGroup* m_playerBullet;
+	MovingGroup* m_bullet;
 	std::list<MovingGroup*> m_baubles;
 	std::list<MovingGroup*> m_lines[4];
 
 	std::vector<SS2DBitmap*> m_baubleBitmaps;
+	std::vector<SS2DBitmap*> m_baubleMovingBitmaps;
 
 	std::vector<MovingCircle*> m_snow;
+	std::queue<MovingCircle*> m_snowSettled;
 
 	MovingText* m_scoreLabel;
 	MovingText* m_scoreValue;

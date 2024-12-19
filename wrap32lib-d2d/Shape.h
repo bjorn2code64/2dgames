@@ -1,12 +1,11 @@
 #pragma once
 
-#include "d2dWindow.h"
+#include <algorithm>
+
+#include "SS2DEssentials.h"
 #include "SS2DBrush.h"
 #define _USE_MATH_DEFINES	// for M_PI
 #include <math.h>
-
-#define SHAPEDRAW_SHOW_GROUP_BOUNDS		0x0001
-#define SHAPEDRAW_SHOW_BITMAP_BOUNDS	0x0002
 
 class Vector2F {
 public:
@@ -204,29 +203,29 @@ public:
 
 	bool IsActive() { return m_active; }
 
-	virtual void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* m_pIWICFactory, const D2DRectScaler* pRS) {
+	virtual void SS2DCreateResources(const SS2DEssentials& ess) {
 	}
 
 	virtual void SS2DDiscardResources() {
 	}
 
-	virtual void SS2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) {
+	virtual void SS2DOnResize(const SS2DEssentials& ess) {
 	}
 
 	void SetBrush(SS2DBrush* b) { m_pBrush = b;  }
 	SS2DBrush* GetBrush() { return m_pBrush; }
 	COLORREF GetBrushColor() { return m_pBrush ? m_pBrush->GetColor() : 0; }
 
-	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, const D2DRectScaler* pRS = NULL) {
+	virtual void Draw(const SS2DEssentials& ess) {
 		for (auto m : m_children) {
 			if (m->IsActive())
-				m->Draw(pRenderTarget, dwFlags, pRS);
+				m->Draw(ess);
 		}
 	}
-	virtual void Draw(ID2D1HwndRenderTarget* pRenderTarget, Point2F pos, DWORD dwFlags, const D2DRectScaler* pRS = NULL) {
+	virtual void Draw(const SS2DEssentials& ess, Point2F pos) {
 		for (auto m : m_children) {
 			if (m->IsActive())
-				m->Draw(pRenderTarget, pos, dwFlags, pRS);
+				m->Draw(ess, pos);
 		}
 	}
 
@@ -302,6 +301,10 @@ public:
 		ChildHasMoved();
 	}
 	const std::vector<Shape*>& GetChildren() { return m_children; }
+	void AddChildAndOffset(Shape* p) {
+		AddChild(p);
+		p->OffsetPos(Point2F(-GetPos().x, -GetPos().y));
+	}
 
 	void RemoveAllChildren(bool del = false) {
 		if (del) {

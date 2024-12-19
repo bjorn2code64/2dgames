@@ -68,32 +68,32 @@ protected:
 	}
 
 	// Direct2D callbacks from the engine. Pass them to our world.
-	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
-		pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_pBrush);
-		m_worldActive->SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory);
+	void SS2DCreateResources(const SS2DEssentials& ess) override {
+		ess.m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_pBrush);
+		m_worldActive->SS2DCreateResources(ess);
 	}
 
 	bool SS2DUpdate(ULONGLONG tick, const Point2F& ptMouse, std::queue<WindowEvent>& events) override {
 		return m_worldActive->SS2DUpdate(tick, ptMouse, events);
 	}
 
-	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
-		m_worldActive->D2DPreRender(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
+	void D2DPreRender(const SS2DEssentials& ess) override {
+		m_worldActive->D2DPreRender(ess);
 	}
 
-	void D2DRender(ID2D1HwndRenderTarget* pRenderTarget) override {
+	void D2DRender() override {
 		D2DClearScreen(m_worldActive->m_colorBackground);
 
 		// Draw the fixed aspect rectangle
 		RectF rectBounds;
 		D2DGetFARRect(&rectBounds);
-		pRenderTarget->DrawRectangle(rectBounds, m_pBrush);
+		m_ess.m_pRenderTarget->DrawRectangle(rectBounds, m_pBrush);
 
-		m_worldActive->D2DRender(pRenderTarget, m_shapeDrawFlags, &m_rsFAR);
+		m_worldActive->D2DRender(m_ess);
 	}
 
-	void D2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
-		m_worldActive->SS2DOnResize(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
+	void D2DOnResize(const SS2DEssentials& ess) override {
+		m_worldActive->SS2DOnResize(ess);
 	}
 
 	void D2DOnDiscardResources() override {
@@ -139,7 +139,8 @@ protected:
 		}
 		else if (message == m_worldMenu.m_amQuit) {
 			Stop();
-			PostQuitMessage(0);
+			DestroyWindow(*this);
+//			PostQuitMessage(0);
 		}
 
 		return __super::WndProc(hWnd, message, wParam, lParam);

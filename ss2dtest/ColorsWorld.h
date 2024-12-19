@@ -2,17 +2,17 @@
 
 #include <SS2DWorld.h>
 
-#define c_screenWidth	600
-#define c_screenHeight	900
-#define c_blockSize		60
-#define c_fallingSpeed	2
-#define c_boardWidth	(c_screenWidth / c_blockSize)
-#define c_boardHeight	(c_screenHeight / c_blockSize)
-#define c_colorsInUse	6
-
 class ColorsWorld : public SS2DWorld
 {
 public:
+	const int c_screenWidth = 600;
+	const int c_screenHeight = 900;
+	const FLOAT c_blockSize = 60;
+	const FLOAT c_fallingSpeed = 2;
+	const int c_boardWidth = (int)(c_screenWidth / c_blockSize);
+	const int c_boardHeight = (int)(c_screenHeight / c_blockSize);
+	const int c_colorsInUse = 6;
+
 	const std::vector<COLORREF> c_colorsAvailable = {
 		RGB(255, 0, 0),
 		RGB(0, 255, 0),
@@ -25,6 +25,8 @@ public:
 
 	class Board {
 	public:
+		const FLOAT c_blockSize = 60;
+
 		~Board() {
 			Clear();
 		}
@@ -94,7 +96,7 @@ public:
 		Shape* RemoveSquareAndDrop(int row, int col) {
 			Shape* ret = RemoveSquare(row, col);
 
-			// drop all the squares above this one until a gap
+			// Drop all the squares above this one until a gap
 			while (--row >= 0) {
 				auto sq = Get(row, col);
 				if (!sq) {
@@ -257,7 +259,7 @@ public:
 
 			// Check for bottom of screen
 			if (m_fallingGroup->WillHitBounds(SS2DGetScreenSize()) == Shape::moveResult::hitboundsbottom) {
-				m_fallingGroup->SetPos(Point2F(m_fallingGroup->GetPos().x, c_screenHeight - 3 * c_blockSize));
+				m_fallingGroup->SetPos(Point2F(m_fallingGroup->GetPos().x, (FLOAT)c_screenHeight - 3 * c_blockSize));
 				if (!AddToBoard()) {
 					Drop();	// only drop if no matches were made
 				}
@@ -266,7 +268,7 @@ public:
 			// Check if we've hit anything else
 			if (m_board.WillHit(m_fallingGroup)) {
 				FLOAT y = m_fallingGroup->GetPos().y;	// align the falling group with the grid
-				int yInt = (int)(((y - 1) / c_blockSize) + 1) * c_blockSize;
+				int yInt = (int)((((y - 1) / c_blockSize) + 1) * c_blockSize);
 				m_fallingGroup->Offset(Point2F(0, yInt - y));
 
 				if (!AddToBoard()) {
@@ -346,7 +348,7 @@ public:
 		m_fallingGroup->SetActive(true);
 
 		// Reset the group
-		m_fallingGroup->SetPos(Point2F((c_screenWidth / 2 ) - c_blockSize, 0));
+		m_fallingGroup->SetPos(Point2F(((FLOAT)c_screenWidth / 2) - c_blockSize, 0));
 		m_fallingGroup->AddChild(
 			new MovingRectangle(0, 0, c_blockSize, c_blockSize, 0, 0, m_brushes[w32rand((DWORD)c_colorsInUse - 1)])
 		);

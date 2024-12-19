@@ -132,10 +132,10 @@ public:
 
 #define DEFAULT_DPI		96.0F
 
-class D2DRectScaler
+class SS2DRectScaler
 {
 public:
-	D2DRectScaler(long cx, long cy) : m_sizeBase(cx, cy), m_fScale(1.0f), m_gridSize(10),
+	SS2DRectScaler(long cx, long cy) : m_sizeBase(cx, cy), m_fScale(1.0f), m_gridSize(10),
 		m_dpiX(DEFAULT_DPI), m_dpiY(DEFAULT_DPI)
 	{}
 

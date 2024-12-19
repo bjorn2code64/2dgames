@@ -34,6 +34,7 @@
     <ClInclude Include="d2dWindow.h" />
     <ClInclude Include="SS2DBitmap.h" />
     <ClInclude Include="d2dtypes.h" />
+    <ClInclude Include="SS2DEssentials.h" />
     <ClInclude Include="SS2DWorld.h" />
     <ClInclude Include="d2dwrite.h" />
     <ClInclude Include="MovingShapes.h" />

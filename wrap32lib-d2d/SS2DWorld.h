@@ -61,20 +61,20 @@ public:
 	~SS2DWorld() {
 	}
 
-	void SS2DCreateResources(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) {
-		m_brushDefault->Create(pRenderTarget);
+	void SS2DCreateResources(const SS2DEssentials& ess) {
+		m_brushDefault->Create(ess.m_pRenderTarget);
 		m_brushes.push_back(m_brushDefault);
 
 		while (!m_brushQueue.empty()) {
 			auto p = m_brushQueue.front();
-			p->Create(pRenderTarget);
+			p->Create(ess.m_pRenderTarget);
 			m_brushes.push_back(p);
 			m_brushQueue.pop();
 		}
 
 		while (!m_bitmapQueue.empty()) {
 			auto p = m_bitmapQueue.front();
-			p->LoadFromFile(pRenderTarget, pIWICFactory);
+			p->LoadFromFile(ess.m_pRenderTarget, ess.m_pIWICFactory);
 			m_bitmapQueue.pop();
 		}
 	}
@@ -92,7 +92,7 @@ public:
 		return true;
 	}
 
-	void SS2DOnResize(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, const D2DRectScaler* pRS) {
+	void SS2DOnResize(const SS2DEssentials& ess) {
 		m_resizeHappened = true;
 	}
 
@@ -138,15 +138,15 @@ public:
 		return p;
 	}
 
-	void InitShape(Shape* p, IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
-		p->SS2DCreateResources(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+	void InitShape(Shape* p, const SS2DEssentials& ess) {
+		p->SS2DCreateResources(ess);
 		for (auto c : p->GetChildren()) {
-			InitShape(c, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+			InitShape(c, ess);
 		}
 	}
 
-	void AddShape(Shape* p, IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS, bool active = true) {
-		InitShape(p, pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+	void AddShape(Shape* p, const SS2DEssentials& ess, bool active = true) {
+		InitShape(p, ess);
 		p->SetActive(active);
 		m_shapes.push_back(p);
 	}
@@ -177,16 +177,16 @@ public:
 		return m_shapes.erase(it);
 	}
 
-	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory, D2DRectScaler* pRS) {
+	void D2DPreRender(const SS2DEssentials& ess) {
 		if (m_resizeHappened) {
 			for (auto s : m_shapes) {
-				s->SS2DOnResize(pDWriteFactory, pRenderTarget, pIWICFactory, pRS);
+				s->SS2DOnResize(ess);
 			}
 		}
 
 		// Now is the time to add queued shapes to the engine.
 		for (auto p : m_shapesQueue) {
-			AddShape(p.first, pDWriteFactory, pRenderTarget, pIWICFactory, pRS, p.second);
+			AddShape(p.first, ess, p.second);
 		}
 		m_shapesQueue.clear();
 	}
@@ -224,10 +224,14 @@ public:
 		return true;
 	}
 
-	virtual bool D2DRender(ID2D1HwndRenderTarget* pRenderTarget, DWORD dwFlags, D2DRectScaler* pRsFAR) {
+	virtual bool D2DRender(const SS2DEssentials& ess) {
+		if (ess.m_ss2dFlags & SS2D_SHOW_STATS) {
+			// draw some stats here!!!
+		}
+
 		for (auto p : m_shapes)
 			if (p->IsActive())
-				p->Draw(pRenderTarget, dwFlags, pRsFAR);
+				p->Draw(ess);
 
 		return true;
 	}

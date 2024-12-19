@@ -36,7 +36,7 @@ protected:
 			m_size = w32Size(p->cx, p->cy);
 			break;
 		}
-		case WM_CLOSE: {
+		case WM_DESTROY: {
 			// Save size and position.
 			IniFileHandler ifh(m_appName.c_str(), L"windowpos");
 			ifh.SetInt(L"pos", L"left", m_pos.x);
@@ -49,7 +49,6 @@ protected:
 			break;
 		}
 		return 0;
-
 	}
 
 protected:

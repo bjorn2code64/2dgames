@@ -2,10 +2,8 @@
 
 #include <wrap32lib.h>
 
-#include <d2d1.h>
-#include <wincodec.h>
-
 #include "d2dtypes.h"
+#include "SS2DEssentials.h"
 
 #pragma comment(lib, "windowscodecs")
 

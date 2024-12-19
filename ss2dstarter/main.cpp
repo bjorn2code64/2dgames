@@ -48,19 +48,21 @@ protected:
 		return m_worldStarter.SS2DUpdate(tick, ptMouse, events);
 	}
 
-	void D2DPreRender(IDWriteFactory* pDWriteFactory, ID2D1HwndRenderTarget* pRenderTarget, IWICImagingFactory* pIWICFactory) override {
-		m_worldStarter.D2DPreRender(pDWriteFactory, pRenderTarget, pIWICFactory, &m_rsFAR);
+	void D2DPreRender(const SS2DEssentials& ess) override {
+		m_worldStarter.D2DPreRender(ess);
+		__super::D2DPreRender(ess);
 	}
 
-	void D2DRender(ID2D1HwndRenderTarget* pRenderTarget) override {
+	void D2DRender() override {
 		D2DClearScreen(m_worldStarter.m_colorBackground);
 
 		// Draw the fixed aspect rectangle
 		RectF rectBounds;
 		D2DGetFARRect(&rectBounds);
-		pRenderTarget->DrawRectangle(rectBounds, *m_worldStarter.GetDefaultBrush());
+		m_ess.m_pRenderTarget->DrawRectangle(rectBounds, *m_worldStarter.GetDefaultBrush());
 
-		m_worldStarter.D2DRender(pRenderTarget, m_shapeDrawFlags, &m_rsFAR);
+		m_worldStarter.D2DRender(m_ess);
+		__super::D2DRender();
 	}
 
 	void D2DOnDiscardResources() override {
